@@ -1,5 +1,5 @@
 #!/bin/sh
-# zhengque.tcl \
+# T2_GPN_PTN_ELINE_003.tcl \
 exec tclsh "$0" ${1+"$@"}
 #测试名称：ptn003
 #-----------------------------------------------------------------------------------------------------------------------------------
@@ -87,21 +87,21 @@ set startSeconds [clock seconds]
 package require gwd 2.0
 package require stcPack
 if {[catch {
-        close stdout
-        file mkdir "log"
-        set fd_log [open "log\\GPN_PTN_003_LOG.txt" a]
-        set stdout $fd_log
-        log_file log\\GPN_PTN_003_LOG.txt
-        chan configure $fd_log -blocking 0 -buffering none;#非阻塞模式 按行flush
-        
-        file mkdir "report"
-        set fileId [open "report\\GPN_PTN_003_REPORT.txt" a+]
-        chan configure $fileId -blocking 0 -buffering none;#非阻塞模式 按行flush
-        
-        file mkdir "debug"
-        set fd_debug [open debug\\GPN_PTN_003_DEBUG.txt a]
-        exp_internal -f debug\\GPN_PTN_003_DEBUG.txt 0
-        chan configure $fd_debug -blocking 0 -buffering none;#非阻塞模式 按行flush
+	close stdout
+	file mkdir "log"
+	set fd_log [open "log\\GPN_PTN_003_LOG.txt" a]
+	set stdout $fd_log
+	log_file log\\GPN_PTN_003_LOG.txt
+	chan configure $fd_log -blocking 0 -buffering none;#非阻塞模式 按行flush
+	
+	file mkdir "report"
+	set fileId [open "report\\GPN_PTN_003_REPORT.txt" a+]
+	chan configure $fileId -blocking 0 -buffering none;#非阻塞模式 按行flush
+	
+	file mkdir "debug"
+	set fd_debug [open debug\\GPN_PTN_003_DEBUG.txt a]
+	exp_internal -f debug\\GPN_PTN_003_DEBUG.txt 0
+	chan configure $fd_debug -blocking 0 -buffering none;#非阻塞模式 按行flush
 	  
 	source test\\PTN_VarSet.tcl
 	source test\\PTN_Mode_Function.tcl
@@ -241,24 +241,65 @@ if {[catch {
 	puts $fileId "**************************************************************************************\n"
 	puts $fileId "创建测试工程...\n"
 	set hPtnProject [stc::create project]
-	set lPortAttribute "$GPNStcPort4 \"media $GPNEth4Media\" $GPNStcPort5 \"media $GPNEth5Media\""
+	set lPortAttribute "$GPNStcPort1 \"media $GPNEth1Media\" $GPNStcPort2 \"media $GPNEth2Media\" $GPNStcPort3\
+			\"media $GPNEth3Media\" $GPNStcPort4 \"media $GPNEth4Media\" $GPNStcPort5 \"media $GPNEth5Media\""
 	gwd::STC_cfgPortAttributeAndReservePort $fileId $hPtnProject $lPortAttribute hPortList hMediaList
-	lassign $hPortList hGPNPort4 hGPNPort5
+	lassign $hPortList hGPNPort1 hGPNPort2 hGPNPort3 hGPNPort4 hGPNPort5
     #创建测试流量
+    gwd::STC_Create_Stream $fileId dataArr1 $hGPNPort3 hGPNPort3Stream1
+    gwd::STC_Create_VlanStream $fileId dataArr2 $hGPNPort3 hGPNPort3Stream2
+    gwd::STC_Create_VlanStream $fileId dataArr2 $hGPNPort3 hGPNPort3Stream8
+    set RangeModifier1 [stc::create "RangeModifier" \
+	-under $hGPNPort3Stream8 \
+	-Mask {00:00:FF:FF:FF:FF} \
+	-StepValue {00:00:00:00:00:01} \
+	-RecycleCount "100" \
+	-Data {00:00:00:00:00:02} \
+	-EnableStream "TRUE" \
+	-Offset "2" \
+	-OffsetReference {eth1.srcMac} \
+	-Name {MAC Modifier} ]
+	stc::apply
+	gwd::STC_Create_VlanStream $fileId dataArr8 $hGPNPort3 hGPNPort3Stream27
+	gwd::STC_Create_VlanStream $fileId dataArr9 $hGPNPort3 hGPNPort3Stream26
+    gwd::STC_Create_VlanStream $fileId dataArr3 $hGPNPort2 hGPNPort2Stream3
     gwd::STC_Create_Stream $fileId dataArr4 $hGPNPort4 hGPNPort4Stream4
     gwd::STC_Create_VlanStream $fileId dataArr5 $hGPNPort4 hGPNPort4Stream5
     gwd::STC_Create_VlanStream $fileId dataArr6 $hGPNPort4 hGPNPort4Stream6
+    gwd::STC_Create_VlanStream $fileId dataArr7 $hGPNPort1 hGPNPort1Stream7
     gwd::STC_Create_VlanStream $fileId dataArr1 $hGPNPort5 hGPNPort5Stream9
-	set lHStream "$hGPNPort4Stream4\
-					  $hGPNPort4Stream5 $hGPNPort4Stream6 $hGPNPort5Stream9"
+	set lHStream "$hGPNPort3Stream1 $hGPNPort3Stream2 $hGPNPort2Stream3 $hGPNPort4Stream4\
+					  $hGPNPort4Stream5 $hGPNPort4Stream6 $hGPNPort1Stream7 $hGPNPort3Stream8 $hGPNPort5Stream9"
+	set QosStream1 "$hGPNPort3Stream27"
+	set QosStream2 "$hGPNPort3Stream26"
 	stc::perform streamBlockActivate -streamBlockList $lHStream -activate "false"
+	stc::perform streamBlockActivate -streamBlockList $QosStream1 -activate "false"
+	stc::perform streamBlockActivate -streamBlockList $QosStream2 -activate "false"
 
     ##获取发生器和分析器指针
+    gwd::Get_Generator $hGPNPort1 hGPNPort1Gen
+    gwd::Get_Analyzer $hGPNPort1 hGPNPort1Ana
+    gwd::Get_Generator $hGPNPort2 hGPNPort2Gen
+    gwd::Get_Analyzer $hGPNPort2 hGPNPort2Ana
+    gwd::Get_Generator $hGPNPort3 hGPNPort3Gen
+    gwd::Get_Analyzer $hGPNPort3 hGPNPort3Ana
     gwd::Get_Generator $hGPNPort4 hGPNPort4Gen
     gwd::Get_Analyzer $hGPNPort4 hGPNPort4Ana
     gwd::Get_Generator $hGPNPort5 hGPNPort5Gen
     gwd::Get_Analyzer $hGPNPort5 hGPNPort5Ana
     ##定制收发信息
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort1 txInfoArr hGPNPort1TxInfo
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort1 rxInfoArr1 hGPNPort1RxInfo1
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort1 rxInfoArr2 hGPNPort1RxInfo2
+	
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort2 txInfoArr hGPNPort2TxInfo
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort2 rxInfoArr1 hGPNPort2RxInfo1
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort2 rxInfoArr2 hGPNPort2RxInfo2
+	
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort3 txInfoArr hGPNPort3TxInfo
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort3 rxInfoArr1 hGPNPort3RxInfo1
+	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort3 rxInfoArr2 hGPNPort3RxInfo2
+	
 	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort4 txInfoArr hGPNPort4TxInfo
 	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort4 rxInfoArr1 hGPNPort4RxInfo1
 	gwd::Sub_TxAndRx_Info $hPtnProject $hGPNPort4 rxInfoArr2 hGPNPort4RxInfo2
@@ -270,25 +311,46 @@ if {[catch {
 	foreach hStream $lHStream {
 		stc::config [stc::get $hStream -AffiliationStreamBlockLoadProfile-targets] -load 100 -LoadUnit MEGABITS_PER_SECOND
 	}
-        stc::apply 
-        #获取发生器配置指针
-        gwd::Get_GeneratorCfgObj $hGPNPort4Gen hGPNPort4GenCfg
-        gwd::Cfg_GeneratorCfgObj $hGPNPort4GenCfg $GenCfg
-        gwd::Get_GeneratorCfgObj $hGPNPort5Gen hGPNPort5GenCfg
-        gwd::Cfg_GeneratorCfgObj $hGPNPort5GenCfg $GenCfg
-        #创建并配置过滤器，默认过滤tag
-        gwd::Create_AnalyzerFrameCfgFilter $hGPNPort4Ana hGPNPort4AnaFrameCfgFil
-        gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort4AnaFrameCfgFil $anaFliFrameCfg1
-        gwd::Create_AnalyzerFrameCfgFilter $hGPNPort5Ana hGPNPort5AnaFrameCfgFil
-        gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort5AnaFrameCfgFil $anaFliFrameCfg1
-        if {$cap_enable} {
-                #获取和配置capture对象相关的指针
-                gwd::Get_Capture $hGPNPort4 hGPNPort4Cap
-                gwd::Get_Capture $hGPNPort5 hGPNPort5Cap
-                gwd::Create_FilterAnalyzer $hGPNPort4Cap hGPNPort4CapFilter hGPNPort4CapAnalyzer
-                gwd::Create_FilterAnalyzer $hGPNPort5Cap hGPNPort5CapFilter hGPNPort5CapAnalyzer
-                array set capArr {capMode "REGULAR_MODE" capSource "Tx_Rx_MODE"}	
-        }
+	stc::config [stc::get $QosStream1 -AffiliationStreamBlockLoadProfile-targets] -load 40 -LoadUnit MEGABITS_PER_SECOND
+	stc::config [stc::get $QosStream2 -AffiliationStreamBlockLoadProfile-targets] -load 20 -LoadUnit MEGABITS_PER_SECOND
+
+	stc::apply 
+	#获取发生器配置指针
+	gwd::Get_GeneratorCfgObj $hGPNPort1Gen hGPNPort1GenCfg
+	gwd::Cfg_GeneratorCfgObj $hGPNPort1GenCfg $GenCfg
+	gwd::Get_GeneratorCfgObj $hGPNPort2Gen hGPNPort2GenCfg
+	gwd::Cfg_GeneratorCfgObj $hGPNPort2GenCfg $GenCfg
+	gwd::Get_GeneratorCfgObj $hGPNPort3Gen hGPNPort3GenCfg
+	gwd::Cfg_GeneratorCfgObj $hGPNPort3GenCfg $GenCfg
+	gwd::Get_GeneratorCfgObj $hGPNPort4Gen hGPNPort4GenCfg
+	gwd::Cfg_GeneratorCfgObj $hGPNPort4GenCfg $GenCfg
+	gwd::Get_GeneratorCfgObj $hGPNPort5Gen hGPNPort5GenCfg
+	gwd::Cfg_GeneratorCfgObj $hGPNPort5GenCfg $GenCfg
+	#创建并配置过滤器，默认过滤tag
+	gwd::Create_AnalyzerFrameCfgFilter $hGPNPort1Ana hGPNPort1AnaFrameCfgFil
+	gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort1AnaFrameCfgFil $anaFliFrameCfg1
+	gwd::Create_AnalyzerFrameCfgFilter $hGPNPort2Ana hGPNPort2AnaFrameCfgFil
+	gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort2AnaFrameCfgFil $anaFliFrameCfg1
+	gwd::Create_AnalyzerFrameCfgFilter $hGPNPort3Ana hGPNPort3AnaFrameCfgFil
+	gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort3AnaFrameCfgFil $anaFliFrameCfg1	
+	gwd::Create_AnalyzerFrameCfgFilter $hGPNPort4Ana hGPNPort4AnaFrameCfgFil
+	gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort4AnaFrameCfgFil $anaFliFrameCfg1
+	gwd::Create_AnalyzerFrameCfgFilter $hGPNPort5Ana hGPNPort5AnaFrameCfgFil
+	gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort5AnaFrameCfgFil $anaFliFrameCfg1
+	if {$cap_enable} {
+		#获取和配置capture对象相关的指针
+		gwd::Get_Capture $hGPNPort1 hGPNPort1Cap
+		gwd::Get_Capture $hGPNPort2 hGPNPort2Cap
+		gwd::Get_Capture $hGPNPort3 hGPNPort3Cap
+		gwd::Get_Capture $hGPNPort4 hGPNPort4Cap
+		gwd::Get_Capture $hGPNPort5 hGPNPort5Cap
+		gwd::Create_FilterAnalyzer $hGPNPort1Cap hGPNPort1CapFilter hGPNPort1CapAnalyzer
+		gwd::Create_FilterAnalyzer $hGPNPort2Cap hGPNPort2CapFilter hGPNPort2CapAnalyzer
+		gwd::Create_FilterAnalyzer $hGPNPort3Cap hGPNPort3CapFilter hGPNPort3CapAnalyzer
+		gwd::Create_FilterAnalyzer $hGPNPort4Cap hGPNPort4CapFilter hGPNPort4CapAnalyzer
+		gwd::Create_FilterAnalyzer $hGPNPort5Cap hGPNPort5CapFilter hGPNPort5CapAnalyzer
+		array set capArr {capMode "REGULAR_MODE" capSource "Tx_Rx_MODE"}	
+	}
 	incr tcId
 	gwd::GWpublic_saveTCCfg 1 $fileId "GPN_PTN_003_$tcId.xml" [pwd]/Untitled
 	puts $fileId "**************************************************************************************\n"
@@ -322,39 +384,39 @@ if {[catch {
 	}
 	set rebootSlotList3 [gwd::GWpulic_getWorkCardList $portList3]
 	gwd::GWpublic_print "OK" "获取设备NE3($gpnIp3)业务板卡槽位号$rebootSlotList3" $fileId
-        
-        ###二三层接口配置参数
-        if {[string match "L2" $Worklevel]} {
-        	set interface1 v100
-        	set interface14 v100
-        	set interface10 v10
-        	set interface11 v10
-        	set interface12 v50
-        	set interface23 v1000
-        	set interface24 v3000
-        	set interface25 v200
-        	set interface26 v200
-        	set interface27 v300
-        	set interface28 v300
-        	set interface29 v2000
-        	set interface30 v1000
-        	set interface2 v100
-        } else {
-        	set interface1 $GPNPort5.100
-        	set interface14 $GPNPort6.100
-        	set interface10 $GPNPort6.10
-        	set interface11 $GPNPort5.10
-        	set interface12 $GPNTestEth3.50
-        	set interface23 $GPNTestEth4.1000
-        	set interface24 $GPNTestEth4.3000
-        	set interface25 $GPNPort11.200
-        	set interface26 $GPNPort12.200
-        	set interface27 $GPNPort13.300
-        	set interface28 $GPNPort14.300
-        	set interface29 $GPNTestEth1.2000
-        	set interface30 $GPNTestEth2.1000
-        	set interface2 $GPNTestEth2.100
-        }
+	
+	###二三层接口配置参数
+	if {[string match "L2" $Worklevel]} {
+		set interface1 v100
+		set interface14 v100
+		set interface10 v10
+		set interface11 v10
+		set interface12 v50
+		set interface23 v1000
+		set interface24 v3000
+		set interface25 v200
+		set interface26 v200
+		set interface27 v300
+		set interface28 v300
+		set interface29 v2000
+		set interface30 v1000
+		set interface2 v100
+	} else {
+		set interface1 $GPNPort5.100
+		set interface14 $GPNPort6.100
+		set interface10 $GPNPort6.10
+		set interface11 $GPNPort5.10
+		set interface12 $GPNTestEth3.50
+		set interface23 $GPNTestEth4.1000
+		set interface24 $GPNTestEth4.3000
+		set interface25 $GPNPort11.200
+		set interface26 $GPNPort12.200
+		set interface27 $GPNPort13.300
+		set interface28 $GPNPort14.300
+		set interface29 $GPNTestEth1.2000
+		set interface30 $GPNTestEth2.1000
+		set interface2 $GPNTestEth2.100
+	}
 	gwd::GWpublic_printAbnormal $fileId $fd_log $cfgFlag "FLAGA" $startSeconds "ELINE与其他模块互操作的基础配置失败，测试结束" \
 			"ELINE与其他模块互操作的基础配置成功，继续后面的测试" "GPN_PTN_003"
 	puts $fileId ""
@@ -368,72 +430,72 @@ if {[catch {
 	# puts $fileId "**************************************************************************************\n"
 	# puts $fileId "**************************************************************************************\n"
 	# gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "Test Case 1 E-LINE与TRUNK互操作测试\n"
-        ##与TRUNK互操作
-        #   <1>三台设备NNI端口(GE端口)彼此之间的NNI口配置为trunk
-        #   <2>其中trunk各自绑定两个端口，均up
-        #   <3>配置E-LINE数据业务
-        #   <4>NE1和NE3用户测配置undo vlan check
-        #   <5>配置TRUNK组的模式为1:1
-        #   <6>插拔trunk主端口50次，记录下业务倒换和恢复时间
-        #   预期结果：业务正常倒换和恢复，时间不超过50ms
-        #   <7>插拔trunk从端口50次
-        #   预期结果：系统无异常，业务不发生倒换，无丢包
-        #   <8>trunk组端口成员均断纤，业务中断；恢复trunk组其中一个端口成员，业务可恢复
-        #   <9>更改trunk组的模式为1+1，重复以上步骤
-        #   <10>更改trunk组的模式为负载分担，重复以上步骤
-        #   <11>从两端设备的trunk中各添加一个down的端口，端口添加成功，业务基本不受影响
-        #   <12>再从这两端设备的trunk中删除该down的端口，端口删除成功，业务基本不受影响
-        #   <13>从两端设备的trunk中各添加一个up的端口，端口添加成功，业务基本不受影响
-        #   <14>再从这两端设备的trunk中删除该up的端口，端口删除成功，业务基本不受影响
-        #   <15>配置trunk组端口成员跨板卡，重复以上步骤
-        #   <16>将UNI侧的端口配置为turnk端口，配置业务数据，业务数据配置成功，业务数据流正常转发
-        #   <17>所配置的trunk聚合方式为静态，重复以上步骤
-        set flag1_case1 0
-        set flag2_case1 0
-        set flag3_case1 0
-        set flag4_case1 0
-        set flag5_case1 0
-        set flag6_case1 0
-        set flag7_case1 0
-        set flag8_case1 0
-        set flag9_case1 0
-        set flag10_case1 0
-        set flag11_case1 0
-        set flag12_case1 0
-        set flag13_case1 0
-        set flag14_case1 0
-        set flag15_case1 0
-        set flag1_case2 0
-        set flag2_case2 0
-        set flag3_case2 0
-        set flag4_case2 0
-        set flag5_case2 0
-        set flag6_case2 0
-        set flag7_case2 0
-        set flag8_case2 0
-        set flag9_case2 0
-        set flag10_case2 0
-        set flag11_case2 0
-        set flag12_case2 0
-        set flag13_case2 0
-        set flag14_case2 0
-        set flag1_case3 0
-        set flag2_case3 0
-        set flag3_case3 0
-        set flag4_case3 0
-        set flag5_case3 0
-        set flag6_case3 0
-        set flag7_case3 0
-        set flag8_case3 0
-        set flag1_case4 0
-        set flag2_case4 0
-        set flag3_case4 0
-        set flag5_case4 0
-        set flag6_case4 0
-        set ip1 192.1.1.1
-        set ip2 192.1.1.2
-        set address1 10.1.1.1
-        set address2 10.1.1.2
+	##与TRUNK互操作
+	#   <1>三台设备NNI端口(GE端口)彼此之间的NNI口配置为trunk
+	#   <2>其中trunk各自绑定两个端口，均up
+	#   <3>配置E-LINE数据业务
+	#   <4>NE1和NE3用户测配置undo vlan check
+	#   <5>配置TRUNK组的模式为1:1
+	#   <6>插拔trunk主端口50次，记录下业务倒换和恢复时间
+	#   预期结果：业务正常倒换和恢复，时间不超过50ms
+	#   <7>插拔trunk从端口50次
+	#   预期结果：系统无异常，业务不发生倒换，无丢包
+	#   <8>trunk组端口成员均断纤，业务中断；恢复trunk组其中一个端口成员，业务可恢复
+	#   <9>更改trunk组的模式为1+1，重复以上步骤
+	#   <10>更改trunk组的模式为负载分担，重复以上步骤
+	#   <11>从两端设备的trunk中各添加一个down的端口，端口添加成功，业务基本不受影响
+	#   <12>再从这两端设备的trunk中删除该down的端口，端口删除成功，业务基本不受影响
+	#   <13>从两端设备的trunk中各添加一个up的端口，端口添加成功，业务基本不受影响
+	#   <14>再从这两端设备的trunk中删除该up的端口，端口删除成功，业务基本不受影响
+	#   <15>配置trunk组端口成员跨板卡，重复以上步骤
+	#   <16>将UNI侧的端口配置为turnk端口，配置业务数据，业务数据配置成功，业务数据流正常转发
+	#   <17>所配置的trunk聚合方式为静态，重复以上步骤
+	set flag1_case1 0
+	set flag2_case1 0
+	set flag3_case1 0
+	set flag4_case1 0
+	set flag5_case1 0
+	set flag6_case1 0
+	set flag7_case1 0
+	set flag8_case1 0
+	set flag9_case1 0
+	set flag10_case1 0
+	set flag11_case1 0
+	set flag12_case1 0
+	set flag13_case1 0
+	set flag14_case1 0
+	set flag15_case1 0
+	set flag1_case2 0
+	set flag2_case2 0
+	set flag3_case2 0
+	set flag4_case2 0
+	set flag5_case2 0
+	set flag6_case2 0
+	set flag7_case2 0
+	set flag8_case2 0
+	set flag9_case2 0
+	set flag10_case2 0
+	set flag11_case2 0
+	set flag12_case2 0
+	set flag13_case2 0
+	set flag14_case2 0
+	set flag1_case3 0
+	set flag2_case3 0
+	set flag3_case3 0
+	set flag4_case3 0
+	set flag5_case3 0
+	set flag6_case3 0
+	set flag7_case3 0
+	set flag8_case3 0
+	set flag1_case4 0
+	set flag2_case4 0
+	set flag3_case4 0
+	set flag5_case4 0
+	set flag6_case4 0
+	set ip1 192.1.1.1
+	set ip2 192.1.1.2
+	set address1 10.1.1.1
+	set address2 10.1.1.2
 	# gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort5 "undo shutdown"
 	# gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort7 "undo shutdown"
 
@@ -548,7 +610,7 @@ if {[catch {
 		set slavePort2 $GPNPort7
 	}
 	##------得到trunk组成员的主端口和从端口，端口号小的口是主端口
-	            #####################################################lag模式为1:1##################################################################
+		    #####################################################lag模式为1:1##################################################################
 	#lappend flag1_case1 [Test_TrunkModeAdd $telnet3 $matchType3 $Gpn_type3 $fileId lag1:1 "t1" $masterPort1 $slavePort1 $ptn003_case1_cnt "GPN_PTN_003_FA1"]
 	# puts $fileId ""
 	# if {"1" in $flag1_case1} {
@@ -1127,7 +1189,7 @@ if {[catch {
 		set slavePort2 $GPNPort7
 	}
 	##------得到trunk组成员的主端口和从端口，端口号小的口是主端口
-	            #####################################################lag模式为1:1##################################################################
+		    #####################################################lag模式为1:1##################################################################
 	# lappend flag1_case2 [Test_TrunkModeAdd $telnet3 $matchType3 $Gpn_type3 $fileId lag1:1 "t1" $masterPort1 $slavePort1 $ptn003_case1_cnt "GPN_PTN_003_FB1"]
 	# puts $fileId ""
 	# if {"1" in $flag1_case2} {
@@ -1393,9 +1455,9 @@ if {[catch {
 	# gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为static、trunk模式为lag1:1、trunk组成员跨板卡，测试E-LINE与trunk互操作  测试开始=====\n"                
 	# gwd::GWpublic_addTrunkMode $telnet3 $matchType3 $Gpn_type3 $fileId "t1" "static" "lag1:1"
 	# gwd::GWpublic_addTrunkMode $telnet1 $matchType1 $Gpn_type1 $fileId "t1" "static" "lag1:1"
-	# lappend flag10_case2 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "TRUE"]
-	# lappend flag10_case2 [gwd::Cfg_StreamActive $hGPNPort3Stream8 "FALSE"]
-	# lappend flag8_case2 [gwd::Cfg_StreamActive $hGPNPort4Stream6 "TRUE"]
+	lappend flag10_case2 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "TRUE"]
+	lappend flag10_case2 [gwd::Cfg_StreamActive $hGPNPort3Stream8 "FALSE"]
+	lappend flag8_case2 [gwd::Cfg_StreamActive $hGPNPort4Stream6 "TRUE"]
 	stc::delete $hGPNPort4AnaFrameCfgFil
 	gwd::Create_AnalyzerFrameCfgFilter $hGPNPort4Ana hGPNPort4AnaFrameCfgFil
     gwd::Cfg_AnalyzerFrameCfgFilter $hGPNPort4AnaFrameCfgFil $anaFliFrameCfg1
@@ -1623,8 +1685,8 @@ if {[catch {
 	set slavePort2 $GPNTestEth2
 	lappend flag1_case3 [gwd::Cfg_StreamActive $hGPNPort4Stream6 "FALSE"]
 	stc::apply
- 	lappend flag1_case3 [Test_TrunkSharing $telnet1 $matchType1 $Gpn_type1 $fileId sharing "t1" $masterPort2 $slavePort2 "false" "GPN_PTN_003_FC1_1"]
- 	lappend flag1_case3 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "FALSE"]
+	 lappend flag1_case3 [Test_TrunkSharing $telnet1 $matchType1 $Gpn_type1 $fileId sharing "t1" $masterPort2 $slavePort2 "false" "GPN_PTN_003_FC1_1"]
+	 lappend flag1_case3 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "FALSE"]
 	lappend flag1_case3 [gwd::Cfg_StreamActive $hGPNPort3Stream8 "TRUE"]
 	stc::apply
 	lappend flag1_case3 [Test_TrunkSharing $telnet1 $matchType1 $Gpn_type1 $fileId sharing "t1" $masterPort2 $slavePort2 "true" "GPN_PTN_003_FC1_2"]
@@ -1895,7 +1957,7 @@ if {[catch {
 		}
 	}
 	##------得到trunk组成员的主端口和从端口，端口号小的口是主端口
-	            #####################################################lag模式为1:1##################################################################
+		    #####################################################lag模式为1:1##################################################################
 	lappend flag1_case2 [Test_TrunkModeAdd $telnet1 $matchType1 $Gpn_type1 $fileId lag1:1 "t1" $masterPort2 $slavePort2 $ptn003_case1_cnt "GPN_PTN_003_FD1"]
 	puts $fileId ""
 	if {"1" in $flag1_case2} {
@@ -1922,8 +1984,8 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	lappend flag2_case4 [gwd::GWpublic_addTrunkPolicy $telnet3 $matchType3 $Gpn_type3 $fileId "t1" "static" "srcmac-based"]
 	lappend flag2_case4 [gwd::Cfg_StreamActive $hGPNPort4Stream6 "FALSE"]
 	stc::apply
- 	lappend flag2_case4 [Test_TrunkSharing $telnet1 $matchType1 $Gpn_type1 $fileId sharing "t1" $masterPort2 $slavePort2 "false" "GPN_PTN_003_FD2_1"]
- 	lappend flag2_case4 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "FALSE"]
+	 lappend flag2_case4 [Test_TrunkSharing $telnet1 $matchType1 $Gpn_type1 $fileId sharing "t1" $masterPort2 $slavePort2 "false" "GPN_PTN_003_FD2_1"]
+	 lappend flag2_case4 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "FALSE"]
 	lappend flag2_case4 [gwd::Cfg_StreamActive $hGPNPort3Stream8 "TRUE"]
 	stc::apply
 	lappend flag2_case4 [Test_TrunkSharing $telnet1 $matchType1 $Gpn_type1 $fileId sharing "t1" $masterPort2 $slavePort2 "true" "GPN_PTN_003_FD2_2"]
@@ -2127,32 +2189,32 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
     #   <3>在ne2的nni入方向限速50m,ne2接收到40m优先级为7和10m优先级为5的数据流,nni取消限速，ne2接受到60m数据流
     
     if {[string match -nocase $Gpn_type1 "7600"] || [string match -nocase $Gpn_type1 "76"]} {
-        set flagCase5 1
+	set flagCase5 1
 
-        gwd::GWpublic_print "NOK" "76设备暂不支持QOS测试，测试跳过" $fileId
+	gwd::GWpublic_print "NOK" "76设备暂不支持QOS测试，测试跳过" $fileId
     } else {
-    	lappend flag1_case5 [GW_SetAcRate $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "egress" "20000" resultac2]
-    	lappend flag1_case5 [GW_SetAcRate $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "ingress" "10000" resultac3]
-    	
-    	lappend flag1_case5 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "FALSE"]
+	    lappend flag1_case5 [GW_SetAcRate $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "egress" "20000" resultac2]
+	    lappend flag1_case5 [GW_SetAcRate $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "ingress" "10000" resultac3]
+	    
+	    lappend flag1_case5 [gwd::Cfg_StreamActive $hGPNPort3Stream2 "FALSE"]
 		lappend flag1_case5 [gwd::Cfg_StreamActive $hGPNPort4Stream6 "FALSE"]
 		lappend flag1_case5 [gwd::Cfg_StreamActive $QosStream1 "TRUE"]
-    	lappend flag1_case5 [GW_SetLspRate $telnet1 $matchType1 $Gpn_type1 $fileId "lsp1" "egress" "50000" resultlsp]
-    	GW_SetPwRate $telnet1 $matchType1 $Gpn_type1 $fileId "pw1" "egress" "60000" resultpw1
-    	if {[]} {
+	    lappend flag1_case5 [GW_SetLspRate $telnet1 $matchType1 $Gpn_type1 $fileId "lsp1" "egress" "50000" resultlsp]
+	    GW_SetPwRate $telnet1 $matchType1 $Gpn_type1 $fileId "pw1" "egress" "60000" resultpw1
+	    if {[]} {
 
-    	}
-    	lappend flag1_case5 [GW_SetPwRate $telnet1 $matchType1 $Gpn_type1 $fileId "pw1" "egress" "40000" resultpw2]
-    	GW_SetAcRate $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "egress" "60000" resultac1
-    	if {[]} {
+	    }
+	    lappend flag1_case5 [GW_SetPwRate $telnet1 $matchType1 $Gpn_type1 $fileId "pw1" "egress" "40000" resultpw2]
+	    GW_SetAcRate $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "egress" "60000" resultac1
+	    if {[]} {
 
-    	}
-    	
+	    }
+	    
 
 
     }
     if {$flagCase5 == 1} {
-        gwd::GWpublic_print "NOK" "TestCase 2测试结论" $fileId
+	gwd::GWpublic_print "NOK" "TestCase 2测试结论" $fileId
 	} else {
 		gwd::GWpublic_print "OK" "TestCase 2测试结论" $fileId
 	}
@@ -2161,19 +2223,19 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	puts $fileId "**************************************************************************************\n"
 	puts $fileId "**************************************************************************************\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "Test Case 3 E-LINE与OAM互操作测试\n"
-        ###与OAM互操作
-        #   <1>配置段层/PW/LSP层0AM，可成功配置，系统无异常，对业务数据转发无影响
-        #   <2>设置段层/PW/LSP层相应的CC功能禁止/使能，设置成功并系统无异常，对业务数据转发无影响
-        #   <3>设置段层/PW/LSP层相应的CC时间间隔参数，设置成功并系统无异常，对业务数据转发无影响
-        #   <4>启动LB功能，系统无异常，并可查询环回结果
-        set flag1_case3 0
-        set flag2_case3 0
-        set flag3_case3 0
-        set flag4_case3 0
-        set flag5_case3 0
-        set flag6_case3 0
-        set flag7_case3 0
-        set flag8_case3 0
+	###与OAM互操作
+	#   <1>配置段层/PW/LSP层0AM，可成功配置，系统无异常，对业务数据转发无影响
+	#   <2>设置段层/PW/LSP层相应的CC功能禁止/使能，设置成功并系统无异常，对业务数据转发无影响
+	#   <3>设置段层/PW/LSP层相应的CC时间间隔参数，设置成功并系统无异常，对业务数据转发无影响
+	#   <4>启动LB功能，系统无异常，并可查询环回结果
+	set flag1_case3 0
+	set flag2_case3 0
+	set flag3_case3 0
+	set flag4_case3 0
+	set flag5_case3 0
+	set flag6_case3 0
+	set flag7_case3 0
+	set flag8_case3 0
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置OAM前测试E-LINE业务  测试开始=====\n"
 	gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort7 "shutdown"
@@ -2202,10 +2264,10 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	}
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置LSP的OAM后测试E-LINE业务  测试开始=====\n"
-        gwd::GWpublic_createMplsMeg $telnet3 $matchType3 $Gpn_type3 $fileId "meg13"
-        gwd::GWpublic_addMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "lsp" "lsp1" "2" "3"
-        gwd::GWpublic_createMplsMeg $telnet1 $matchType1 $Gpn_type1 $fileId "meg11"
-        gwd::GWpublic_addMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "lsp" "lsp1" "3" "2"
+	gwd::GWpublic_createMplsMeg $telnet3 $matchType3 $Gpn_type3 $fileId "meg13"
+	gwd::GWpublic_addMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "lsp" "lsp1" "2" "3"
+	gwd::GWpublic_createMplsMeg $telnet1 $matchType1 $Gpn_type1 $fileId "meg11"
+	gwd::GWpublic_addMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "lsp" "lsp1" "3" "2"
 	incr capId
 	if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
 		set flag2_case3 1
@@ -2227,10 +2289,10 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	}
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置PW的OAM后测试E-LINE业务  测试开始=====\n"
-        gwd::GWpublic_delMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "lsp"
-        gwd::GWpublic_addMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "pw" "pw1" "5" "4"
-        gwd::GWpublic_delMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "lsp"
-        gwd::GWpublic_addMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "pw" "pw1" "4" "5"
+	gwd::GWpublic_delMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "lsp"
+	gwd::GWpublic_addMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "pw" "pw1" "5" "4"
+	gwd::GWpublic_delMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "lsp"
+	gwd::GWpublic_addMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "pw" "pw1" "4" "5"
 	incr capId
 	if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
 		set flag3_case3 1
@@ -2252,10 +2314,10 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	}
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置段层的OAM后测试E-LINE业务  测试开始=====\n"
-        gwd::GWpublic_delMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "pw"
-        gwd::GWpublic_addMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "segment" $GPNTestEth4 "7" "6"
-        gwd::GWpublic_delMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "pw"
-        gwd::GWpublic_addMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "segment" $GPNTestEth3 "6" "7"
+	gwd::GWpublic_delMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "pw"
+	gwd::GWpublic_addMplsOam $telnet3 $matchType3 $Gpn_type3 $fileId "meg13" "segment" $GPNTestEth4 "7" "6"
+	gwd::GWpublic_delMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "pw"
+	gwd::GWpublic_addMplsOam $telnet1 $matchType1 $Gpn_type1 $fileId "meg11" "segment" $GPNTestEth3 "6" "7"
 	incr capId
 	if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
 		set flag4_case3 1
@@ -2380,125 +2442,125 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	puts $fileId "**************************************************************************************\n"
 	puts $fileId "**************************************************************************************\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "Test Case 4 E-LINE与DCN互操作测试\n"
-        ###与DCN互操作
-        #   <1>2台设备用DCN进行网管，其中一台为网关网元，另一台为非网关网元
-        #   <2>2台设备发送ping包均正常，设备均可正常上网管，业务数据流正常转发，系统无异常
-        #   <3>删除所创建的DCN配置，对E-LINE业务无影响
-        set flag1_case4 0
-        set flag2_case4 0
-        set flag3_case4 0
-        set flag4_case4 0
-        set ip11 192.2.1.1
-        set ip12 192.2.1.2
+	###与DCN互操作
+	#   <1>2台设备用DCN进行网管，其中一台为网关网元，另一台为非网关网元
+	#   <2>2台设备发送ping包均正常，设备均可正常上网管，业务数据流正常转发，系统无异常
+	#   <3>删除所创建的DCN配置，对E-LINE业务无影响
+	set flag1_case4 0
+	set flag2_case4 0
+	set flag3_case4 0
+	set flag4_case4 0
+	set ip11 192.2.1.1
+	set ip12 192.2.1.2
 	if {[string match "L2" $Worklevel]}  {
-                puts $fileId "======================================================================================\n"
-                gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置DCN后测试E-LINE业务  测试开始=====\n"
-                gwd::GWpublic_addDCN $telnet1 $matchType1 $Gpn_type1 $fileId "gat" "100" "253"  "$GPNTestEth2 $GPNPort5" "mgt ne-to-ne"
-        	AddportAndIptovlan $telnet1 $matchType1 $Gpn_type1 $fileId "100" "port" $GPNTestEth2 "untagged" $ip11 24
-                gwd::GWpublic_addDCN $telnet3 $matchType3 $Gpn_type3 $fileId "ne" "100" "253" $GPNPort6 "ne-to-ne"
-        	AddportAndIptovlan $telnet3 $matchType3 $Gpn_type3 $fileId "100" "port" $GPNPort6 "tagged" $ip12 24
+		puts $fileId "======================================================================================\n"
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置DCN后测试E-LINE业务  测试开始=====\n"
+		gwd::GWpublic_addDCN $telnet1 $matchType1 $Gpn_type1 $fileId "gat" "100" "253"  "$GPNTestEth2 $GPNPort5" "mgt ne-to-ne"
+		AddportAndIptovlan $telnet1 $matchType1 $Gpn_type1 $fileId "100" "port" $GPNTestEth2 "untagged" $ip11 24
+		gwd::GWpublic_addDCN $telnet3 $matchType3 $Gpn_type3 $fileId "ne" "100" "253" $GPNPort6 "ne-to-ne"
+		AddportAndIptovlan $telnet3 $matchType3 $Gpn_type3 $fileId "100" "port" $GPNPort6 "tagged" $ip12 24
 		incr capId
 		if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
-                	set flag1_case4 1
-                }
-                puts $fileId ""
-                if {$flag1_case4 == 1} {
-                	set flagCase4 1
-                	gwd::GWpublic_print "NOK" "FC6（结论）配置DCN后测试E-LINE业务" $fileId
-                } else {
-                	gwd::GWpublic_print "OK" "FC6（结论）配置DCN后测试E-LINE业务" $fileId
-                }
+			set flag1_case4 1
+		}
 		puts $fileId ""
-                gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置DCN后测试E-LINE业务  测试结束=====\n"
+		if {$flag1_case4 == 1} {
+			set flagCase4 1
+			gwd::GWpublic_print "NOK" "FC6（结论）配置DCN后测试E-LINE业务" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "FC6（结论）配置DCN后测试E-LINE业务" $fileId
+		}
+		puts $fileId ""
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置DCN后测试E-LINE业务  测试结束=====\n"
 		gwd::GWpublic_saveTCCfg 0 $fileId "GPN_PTN_003_$tcId.xml" [pwd]/Untitled
 		incr cfgId
 		lappend FLAGF [gwd::GWpublic_uploadDevCfg 1 $lSpawn_id $lMatchType $lDutType $fileId $fd_log $startSeconds $lIp $ftp $cfgId "GPN_PTN_003" lFailFileTmp]
 		if {$lFailFileTmp != ""} {
 			set lFailFile [concat $lFailFile $lFailFileTmp]
 		}
-                puts $fileId "======================================================================================\n"
-                gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置E-LINE业务后，测试DCN功能  测试开始=====\n"
-        	gwd::GWpublic_cfgPing $telnet3 $matchType3 $Gpn_type3 $fileId $ip11 packageLoss
-                if {$packageLoss>20} {
-                	set flag2_case4 1
-                	gwd::GWpublic_print "NOK" "网关NE3($gpnIp3)设备 ping网关网元设备NE1($gpnIp1)丢包率为$packageLoss，大于允许丢包率20%" $fileId
-                } else {
-                	gwd::GWpublic_print "OK" "网关NE3($gpnIp3)设备 ping网关网元设备NE1($gpnIp1)丢包率为$packageLoss，小于允许丢包率20%" $fileId	
-                }
-        	gwd::GWpublic_cfgPing $telnet1 $matchType1 $Gpn_type1 $fileId $ip12 packageLoss
-        	if {$packageLoss>20} {
-        		set flag2_case4 1
-        		gwd::GWpublic_print "NOK" "网关网元设备NE1($gpnIp1)ping网关NE3($gpnIp3)设备丢包率为$packageLoss，大于允许丢包率20%" $fileId
-        	} else {
-        		gwd::GWpublic_print "OK" "网关网元设备NE1($gpnIp1)ping网关NE3($gpnIp3)设备丢包率为$packageLoss，小于允许丢包率20%" $fileId	
-        	}
-                #创建ping device，获取PingReport
-                set hEmulatedDevice1 [gwd::Create_PingDevice $hPtnProject $hGPNPort2 "192.2.1.3" "192.2.1.254" "00:00:00:00:11:01"]
-                set hPingResult1 [stc::get $hGPNPort2 -children-PingReport]
-                stc::perform PingStartCommand -DeviceList $hEmulatedDevice1 -FrameCount 10 -PingIpv4DstAddr $ip12 
-                after 20000 
-                set sucPingCnt1 0
-                set sucPingCnt1 [stc::get $hPingResult1 -SuccessfulPingCount]
-                puts "ping $ip12  $sucPingCnt1"
-                puts "sucPingCnt1: $sucPingCnt1"
-                if {$sucPingCnt1 < 8} {
-                	set flag2_case4 1
-                	gwd::GWpublic_print "NOK" "网关设备NE1($gpnIp1)端口GPNTestEth2\连接的TC模拟PC ping 网元设备NE3($gpnIp3)设备，共ping10个包ping通$sucPingCnt1\个包" $fileId
-                } else {
-                	gwd::GWpublic_print "OK" "网关设备NE1($gpnIp1)端口GPNTestEth2\连接的TC模拟PC ping 网元设备NE3($gpnIp3)设备，共ping10个包ping通$sucPingCnt1\个包" $fileId
-                }
-        	puts $fileId ""
-        	if {$flag2_case4 == 1} {
-        		set flagCase4 1
-        		gwd::GWpublic_print "NOK" "FC7（结论）配置E-LINE业务后，测试DCN功能" $fileId
-        	} else {
-        		gwd::GWpublic_print "OK" "FC7（结论）配置E-LINE业务后，测试DCN功能" $fileId
-        	}
+		puts $fileId "======================================================================================\n"
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置E-LINE业务后，测试DCN功能  测试开始=====\n"
+		gwd::GWpublic_cfgPing $telnet3 $matchType3 $Gpn_type3 $fileId $ip11 packageLoss
+		if {$packageLoss>20} {
+			set flag2_case4 1
+			gwd::GWpublic_print "NOK" "网关NE3($gpnIp3)设备 ping网关网元设备NE1($gpnIp1)丢包率为$packageLoss，大于允许丢包率20%" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "网关NE3($gpnIp3)设备 ping网关网元设备NE1($gpnIp1)丢包率为$packageLoss，小于允许丢包率20%" $fileId	
+		}
+		gwd::GWpublic_cfgPing $telnet1 $matchType1 $Gpn_type1 $fileId $ip12 packageLoss
+		if {$packageLoss>20} {
+			set flag2_case4 1
+			gwd::GWpublic_print "NOK" "网关网元设备NE1($gpnIp1)ping网关NE3($gpnIp3)设备丢包率为$packageLoss，大于允许丢包率20%" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "网关网元设备NE1($gpnIp1)ping网关NE3($gpnIp3)设备丢包率为$packageLoss，小于允许丢包率20%" $fileId	
+		}
+		#创建ping device，获取PingReport
+		set hEmulatedDevice1 [gwd::Create_PingDevice $hPtnProject $hGPNPort2 "192.2.1.3" "192.2.1.254" "00:00:00:00:11:01"]
+		set hPingResult1 [stc::get $hGPNPort2 -children-PingReport]
+		stc::perform PingStartCommand -DeviceList $hEmulatedDevice1 -FrameCount 10 -PingIpv4DstAddr $ip12 
+		after 20000 
+		set sucPingCnt1 0
+		set sucPingCnt1 [stc::get $hPingResult1 -SuccessfulPingCount]
+		puts "ping $ip12  $sucPingCnt1"
+		puts "sucPingCnt1: $sucPingCnt1"
+		if {$sucPingCnt1 < 8} {
+			set flag2_case4 1
+			gwd::GWpublic_print "NOK" "网关设备NE1($gpnIp1)端口GPNTestEth2\连接的TC模拟PC ping 网元设备NE3($gpnIp3)设备，共ping10个包ping通$sucPingCnt1\个包" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "网关设备NE1($gpnIp1)端口GPNTestEth2\连接的TC模拟PC ping 网元设备NE3($gpnIp3)设备，共ping10个包ping通$sucPingCnt1\个包" $fileId
+		}
 		puts $fileId ""
-        	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置E-LINE业务后，测试DCN功能  测试结束=====\n"
+		if {$flag2_case4 == 1} {
+			set flagCase4 1
+			gwd::GWpublic_print "NOK" "FC7（结论）配置E-LINE业务后，测试DCN功能" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "FC7（结论）配置E-LINE业务后，测试DCN功能" $fileId
+		}
+		puts $fileId ""
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====配置E-LINE业务后，测试DCN功能  测试结束=====\n"
 		gwd::GWpublic_saveTCCfg 0 $fileId "GPN_PTN_003_$tcId.xml" [pwd]/Untitled
 		gwd::GWpublic_uploadDevCfg 0 $lSpawn_id $lMatchType $lDutType $fileId $fd_log $startSeconds $lIp $ftp $cfgId "GPN_PTN_003" lFailFileTmp
-        	puts $fileId "======================================================================================\n"
-        	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====测试DCN功能后再测试E-LINE业务  测试开始=====\n"
+		puts $fileId "======================================================================================\n"
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====测试DCN功能后再测试E-LINE业务  测试开始=====\n"
 		incr capId
 		if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
-        		set flag3_case4 1
-        	}
-        	puts $fileId ""
-        	if {$flag3_case4 == 1} {
-        		set flagCase4 1
-        		gwd::GWpublic_print "NOK" "FC8（结论）测试DCN功能后再测试E-LINE业务" $fileId
-        	} else {
-        		gwd::GWpublic_print "OK" "FC8（结论）测试DCN功能后再测试E-LINE业务" $fileId
-        	}
+			set flag3_case4 1
+		}
 		puts $fileId ""
-        	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====测试DCN功能后再测试E-LINE业务  测试结束=====\n"
+		if {$flag3_case4 == 1} {
+			set flagCase4 1
+			gwd::GWpublic_print "NOK" "FC8（结论）测试DCN功能后再测试E-LINE业务" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "FC8（结论）测试DCN功能后再测试E-LINE业务" $fileId
+		}
+		puts $fileId ""
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====测试DCN功能后再测试E-LINE业务  测试结束=====\n"
 		gwd::GWpublic_saveTCCfg 0 $fileId "GPN_PTN_003_$tcId.xml" [pwd]/Untitled
 		gwd::GWpublic_uploadDevCfg 0 $lSpawn_id $lMatchType $lDutType $fileId $fd_log $startSeconds $lIp $ftp $cfgId "GPN_PTN_003" lFailFileTmp
-        	puts $fileId "======================================================================================\n"
-        	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====删除DCN的配置后测试E-LINE业务  测试开始=====\n"
-        	gwd::GWpublic_delDCN $telnet1 $matchType1 $Gpn_type1 $fileId "ne" "$GPNTestEth2 $GPNPort5"
-        	gwd::GWpublic_delDCN $telnet3 $matchType3 $Gpn_type3 $fileId "ne" $GPNPort6
+		puts $fileId "======================================================================================\n"
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====删除DCN的配置后测试E-LINE业务  测试开始=====\n"
+		gwd::GWpublic_delDCN $telnet1 $matchType1 $Gpn_type1 $fileId "ne" "$GPNTestEth2 $GPNPort5"
+		gwd::GWpublic_delDCN $telnet3 $matchType3 $Gpn_type3 $fileId "ne" $GPNPort6
 		incr capId
 		if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
-        		set flag4_case4 1
-        	}
-        	puts $fileId ""
-        	if {$flag4_case4 == 1} {
-        		set flagCase4 1
-        		gwd::GWpublic_print "NOK" "FC9（结论）删除DCN的配置后测试E-LINE业务" $fileId
-        	} else {
-        		gwd::GWpublic_print "OK" "FC9（结论）删除DCN的配置后测试E-LINE业务" $fileId
-        	}
+			set flag4_case4 1
+		}
 		puts $fileId ""
-        	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====删除DCN的配置后测试E-LINE业务  测试结束=====\n"
+		if {$flag4_case4 == 1} {
+			set flagCase4 1
+			gwd::GWpublic_print "NOK" "FC9（结论）删除DCN的配置后测试E-LINE业务" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "FC9（结论）删除DCN的配置后测试E-LINE业务" $fileId
+		}
+		puts $fileId ""
+		gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====删除DCN的配置后测试E-LINE业务  测试结束=====\n"
 		gwd::GWpublic_saveTCCfg 0 $fileId "GPN_PTN_003_$tcId.xml" [pwd]/Untitled
 		incr cfgId
 		lappend FLAGF [gwd::GWpublic_uploadDevCfg 1 $lSpawn_id $lMatchType $lDutType $fileId $fd_log $startSeconds $lIp $ftp $cfgId "GPN_PTN_003" lFailFileTmp]
 		if {$lFailFileTmp != ""} {
 			set lFailFile [concat $lFailFile $lFailFileTmp]
 		}
-        	puts $fileId "======================================================================================\n"
+		puts $fileId "======================================================================================\n"
 		
 	} else {
 		puts $fileId "DCN是二层功能，三层不需要测试\n"
@@ -2513,19 +2575,19 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	puts $fileId "**************************************************************************************\n"
 	puts $fileId "**************************************************************************************\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "Test Case 5 E-LINE与CES互操作测试\n"
-        ##与CES互操作
-        #   <1>与之前创建的E-LINE业务共用LSP，因只需配置PW和相应的CES业务
-        #   <2>CES业务配置成功，系统无异常
-        #   <3>CES业务和之前的E-LINE业务正常转发，彼此之间无干扰
-        #   <4>在CES业务和E-LINE业务共用的LSP上做限速，系统无异常，CES业务和E-LINE业务可正常转发
-        ####删除AC和PW
-        puts $fileId "暂不覆盖，测试跳过"
-        gwd::GWAc_DelActPw $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"
-        gwd::GWAc_DelName $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"
-        #gwd::GPN_CfgCES "GPN_PTN_003" $fileId "ces3" "pdh" "1/1" "pw1" "256" "true" "true" "8" "false" "2" "10" "adaptive" "satop" "ef" $telnet3 $Gpn_type3
-        gwd::GWAc_DelActPw $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"
-        gwd::GWAc_DelName $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"
-        #gwd::GPN_CfgCES "GPN_PTN_003" $fileId "ces1" "pdh" "1/1" "pw1" "256" "true" "true" "8" "false" "2" "10" "adaptive" "satop" "ef" $telnet1 $Gpn_type1
+	##与CES互操作
+	#   <1>与之前创建的E-LINE业务共用LSP，因只需配置PW和相应的CES业务
+	#   <2>CES业务配置成功，系统无异常
+	#   <3>CES业务和之前的E-LINE业务正常转发，彼此之间无干扰
+	#   <4>在CES业务和E-LINE业务共用的LSP上做限速，系统无异常，CES业务和E-LINE业务可正常转发
+	####删除AC和PW
+	puts $fileId "暂不覆盖，测试跳过"
+	gwd::GWAc_DelActPw $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"
+	gwd::GWAc_DelName $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"
+	#gwd::GPN_CfgCES "GPN_PTN_003" $fileId "ces3" "pdh" "1/1" "pw1" "256" "true" "true" "8" "false" "2" "10" "adaptive" "satop" "ef" $telnet3 $Gpn_type3
+	gwd::GWAc_DelActPw $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"
+	gwd::GWAc_DelName $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"
+	#gwd::GPN_CfgCES "GPN_PTN_003" $fileId "ces1" "pdh" "1/1" "pw1" "256" "true" "true" "8" "false" "2" "10" "adaptive" "satop" "ef" $telnet1 $Gpn_type1
 	if {$flagCase5 == 1} {
 		gwd::GWpublic_print "NOK" "TestCase 5测试结论" $fileId
 	} else {
@@ -2536,35 +2598,35 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	puts $fileId "**************************************************************************************\n"
 	puts $fileId "**************************************************************************************\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "Test Case 6 E-LINE与ELAN/ETREE互操作测试\n"
-        ###ELAN/ETREE互操作
-        #   <1>3台设备原有E-LINE业务的基础上，创建新的业务ELAN/ETREE
-        #   <2>新的业务ELAN/ETREE业务成功创建，系统无异常，对之前的业务无影响
-        #   <3>每条业务都正常转发，彼此之间无干扰，系统利用率正常
-        set flag1_case6 0
-        set flag2_case6 0
-        set flag3_case6 0
-        set address11 10.2.1.1
-        set address12 10.2.2.2
-        set address13 10.2.1.3
-        set address14 10.2.3.4
-        set address15 10.2.2.5
-        set address16 10.2.3.6
-        set ip31 192.3.1.1
-        set ip32 192.3.2.2
-        set ip33 192.3.1.3
-        set ip34 192.3.3.1
-        set ip35 192.3.2.3
-        set ip36 192.3.3.3
+	###ELAN/ETREE互操作
+	#   <1>3台设备原有E-LINE业务的基础上，创建新的业务ELAN/ETREE
+	#   <2>新的业务ELAN/ETREE业务成功创建，系统无异常，对之前的业务无影响
+	#   <3>每条业务都正常转发，彼此之间无干扰，系统利用率正常
+	set flag1_case6 0
+	set flag2_case6 0
+	set flag3_case6 0
+	set address11 10.2.1.1
+	set address12 10.2.2.2
+	set address13 10.2.1.3
+	set address14 10.2.3.4
+	set address15 10.2.2.5
+	set address16 10.2.3.6
+	set ip31 192.3.1.1
+	set ip32 192.3.2.2
+	set ip33 192.3.1.3
+	set ip34 192.3.3.1
+	set ip35 192.3.2.3
+	set ip36 192.3.3.3
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====互操作前测试E-LINE业务  测试开始=====\n"
 	if {[string match "L2" $Worklevel]} {
 		gwd::GWpublic_CfgVlanCheck $telnet3 $matchType3 $Gpn_type3 $fileId $GPNTestEth4 "enable"
 	}
 	PTN_UNI_AddInter $telnet3 $matchType3 $Gpn_type3 $fileId $Worklevel "1000" $GPNTestEth4
-        gwd::GWpublic_CfgAc $telnet3 $matchType3 $Gpn_type3 $fileId "ac1" "" $GPNTestEth4 1000 0 "nochange" 1 0 0 "0x8100"
-        gwd::GWpublic_CfgAcBind $telnet3 $matchType3 $Gpn_type3 $fileId "ac1" "pw1" "eline"
-        gwd::GWpublic_CfgAc $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "" $GPNTestEth3 50 0 "nochange" 1 0 0 "0x8100"
-        gwd::GWpublic_CfgAcBind $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "pw1" "eline"
+	gwd::GWpublic_CfgAc $telnet3 $matchType3 $Gpn_type3 $fileId "ac1" "" $GPNTestEth4 1000 0 "nochange" 1 0 0 "0x8100"
+	gwd::GWpublic_CfgAcBind $telnet3 $matchType3 $Gpn_type3 $fileId "ac1" "pw1" "eline"
+	gwd::GWpublic_CfgAc $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "" $GPNTestEth3 50 0 "nochange" 1 0 0 "0x8100"
+	gwd::GWpublic_CfgAcBind $telnet1 $matchType1 $Gpn_type1 $fileId "ac50" "pw1" "eline"
 	incr capId
 	if {[TestFlow $fileId "GPN_PTN_003_$capId"]} {
 		set flag1_case6 1
@@ -2586,52 +2648,52 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	}
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====vpls的ID与PW的ID冲突测试  测试开始=====\n"
-        ##############################################配置e-lan业务###################################################################
-        ##############################################配置7600-3######################################################################
-        gwd::GWpublic_Getresource $telnet3 $matchType3 $Gpn_type3 $fileId resource1
+	##############################################配置e-lan业务###################################################################
+	##############################################配置7600-3######################################################################
+	gwd::GWpublic_Getresource $telnet3 $matchType3 $Gpn_type3 $fileId resource1
 	PTN_NNI_AddInterIp_tag $fileId $Worklevel $interface14 $ip31 $GPNPort6 $matchType3 $Gpn_type3 $telnet3
-        PTN_NNI_AddInterIp $fileId $Worklevel $interface25 $ip32 $GPNPort11 $matchType3 $Gpn_type3 $telnet3
+	PTN_NNI_AddInterIp $fileId $Worklevel $interface25 $ip32 $GPNPort11 $matchType3 $Gpn_type3 $telnet3
 	if {[string match "L2" $Worklevel]} {
-        	gwd::GWpublic_CfgVlanStack $telnet3 $matchType3 $Gpn_type3 $fileId $GPNPort6 "enable"
-        	gwd::GWpublic_CfgVlanStack $telnet3 $matchType3 $Gpn_type3 $fileId $GPNPort11 "enable"
+		gwd::GWpublic_CfgVlanStack $telnet3 $matchType3 $Gpn_type3 $fileId $GPNPort6 "enable"
+		gwd::GWpublic_CfgVlanStack $telnet3 $matchType3 $Gpn_type3 $fileId $GPNPort11 "enable"
 	}
-        ###配置vpls
-        if {![gwd::GWVpls_AddInfo $telnet3 $matchType3 $Gpn_type3 $fileId "vpls3" "2" "elan" "flood" "false" "false" "false" "true" "2000" "" ""]} {
-        	gwd::GWpublic_print "OK" "配置elan业务的VPLSID与专网PWID相同，配置成功无提示" $fileId
-        } else {
+	###配置vpls
+	if {![gwd::GWVpls_AddInfo $telnet3 $matchType3 $Gpn_type3 $fileId "vpls3" "2" "elan" "flood" "false" "false" "false" "true" "2000" "" ""]} {
+		gwd::GWpublic_print "OK" "配置elan业务的VPLSID与专网PWID相同，配置成功无提示" $fileId
+	} else {
 		set flag2_case6 1
-        	gwd::GWpublic_print "NOK" "配置elan业务的VPLSID与专网PWID相同，配置失败有提示" $fileId
+		gwd::GWpublic_print "NOK" "配置elan业务的VPLSID与专网PWID相同，配置失败有提示" $fileId
 		gwd::GWVpls_DelInfo $telnet3 $matchType3 $Gpn_type3 $fileId "vpls3"
 		gwd::GWVpls_AddInfo $telnet3 $matchType3 $Gpn_type3 $fileId "vpls3" "3" "elan" "flood" "false" "false" "false" "true" "2000" "" ""
-        }
-        ###配置lsp
-        gwd::GWpublic_CfgLspTunnel $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3" $interface14 $ip33 "200" "200" "normal" "3"
-        gwd::GWpublic_CfgLspAddress $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3" $address11
-        gwd::GWpublic_CfgUndoShutLsp $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3"
-        gwd::GWpublic_CfgLspTunnel $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4" $interface25 $ip35 "300" "400" "normal" "4"
-        gwd::GWpublic_CfgLspAddress $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4" $address12
-        gwd::GWpublic_CfgUndoShutLsp $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4"
-        ##配置pw
-        gwd::GWpublic_CfgPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw3" "vpls" "vpls3" "peer" $address11 "2000" "2000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "3"
-        gwd::GWpublic_CfgPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw4" "vpls" "vpls3" "peer" $address12 "3000" "4000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "4"
-        ##配置ac
-        PTN_UNI_AddInter $telnet3 $matchType3 $Gpn_type3 $fileId $Worklevel "3000" $GPNTestEth4
-	gwd::GWAc_AddVplsInfo $telnet3 $matchType3 $Gpn_type3 $fileId "ac3" "vpls3" "" $GPNTestEth4 "3000" "0" "none" "nochange" "1" "0" "0" "0x9100" "evc2"
-        ############################################配置7600-1#######################################################
-	PTN_NNI_AddInterIp_tag $fileId $Worklevel $interface1 $ip33 $GPNPort5 $matchType1 $Gpn_type1 $telnet1
-        PTN_NNI_AddInterIp $fileId $Worklevel $interface28 $ip34 $GPNPort14 $matchType1 $Gpn_type1 $telnet1
-	if {[string match "L2" $Worklevel]} {
-        	gwd::GWpublic_CfgVlanStack $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort5 "enable"
-       		gwd::GWpublic_CfgVlanStack $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort14 "enable"
 	}
-        ##配置vpls
-        gwd::GWVpls_AddInfo $telnet1 $matchType1 $Gpn_type1 $fileId "vpls1" "2" "elan" "flood" "false" "false" "false" "true" "2000" "" ""
-        if {![gwd::GWpublic_CfgPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw11" "l2transport" "2" "" $address1 "1001" "1001" "1" "nochange" "" 1 0 "0x8100" "0x8100" ""]} {
+	###配置lsp
+	gwd::GWpublic_CfgLspTunnel $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3" $interface14 $ip33 "200" "200" "normal" "3"
+	gwd::GWpublic_CfgLspAddress $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3" $address11
+	gwd::GWpublic_CfgUndoShutLsp $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3"
+	gwd::GWpublic_CfgLspTunnel $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4" $interface25 $ip35 "300" "400" "normal" "4"
+	gwd::GWpublic_CfgLspAddress $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4" $address12
+	gwd::GWpublic_CfgUndoShutLsp $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4"
+	##配置pw
+	gwd::GWpublic_CfgPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw3" "vpls" "vpls3" "peer" $address11 "2000" "2000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "3"
+	gwd::GWpublic_CfgPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw4" "vpls" "vpls3" "peer" $address12 "3000" "4000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "4"
+	##配置ac
+	PTN_UNI_AddInter $telnet3 $matchType3 $Gpn_type3 $fileId $Worklevel "3000" $GPNTestEth4
+	gwd::GWAc_AddVplsInfo $telnet3 $matchType3 $Gpn_type3 $fileId "ac3" "vpls3" "" $GPNTestEth4 "3000" "0" "none" "nochange" "1" "0" "0" "0x9100" "evc2"
+	############################################配置7600-1#######################################################
+	PTN_NNI_AddInterIp_tag $fileId $Worklevel $interface1 $ip33 $GPNPort5 $matchType1 $Gpn_type1 $telnet1
+	PTN_NNI_AddInterIp $fileId $Worklevel $interface28 $ip34 $GPNPort14 $matchType1 $Gpn_type1 $telnet1
+	if {[string match "L2" $Worklevel]} {
+		gwd::GWpublic_CfgVlanStack $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort5 "enable"
+		       gwd::GWpublic_CfgVlanStack $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort14 "enable"
+	}
+	##配置vpls
+	gwd::GWVpls_AddInfo $telnet1 $matchType1 $Gpn_type1 $fileId "vpls1" "2" "elan" "flood" "false" "false" "false" "true" "2000" "" ""
+	if {![gwd::GWpublic_CfgPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw11" "l2transport" "2" "" $address1 "1001" "1001" "1" "nochange" "" 1 0 "0x8100" "0x8100" ""]} {
 		gwd::GWpublic_print "OK" "配置专网PWID与elan业务的VPLSID相同，配置成功无提示" $fileId
-        } else {
+	} else {
 		set flag2_case6 1
 		gwd::GWpublic_print "NOK" "配置专网PWID与elan业务的VPLSID相同，配置失败有提示" $fileId
-        }
+	}
 	
 	puts $fileId ""
 	if {$flag2_case6 == 1} {
@@ -2650,53 +2712,53 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	}
 	puts $fileId "======================================================================================\n"
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务相互是否有影响  测试开始=====\n"
-        gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw11"
-        ##配置lsp
-        gwd::GWpublic_CfgLspTunnel $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3" $interface1 $ip31 "200" "200" "normal" "5"
-        gwd::GWpublic_CfgLspAddress $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3" $address13
-        gwd::GWpublic_CfgUndoShutLsp $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3"
-        gwd::GWpublic_showTunnelInfo $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3"
-        gwd::GWpublic_CfgLspTunnel $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6" $interface28 $ip36 "500" "600" "normal" "6"
-        gwd::GWpublic_CfgLspAddress $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6" $address14
-        gwd::GWpublic_CfgUndoShutLsp $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6"
-        gwd::GWpublic_showTunnelInfo $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6"
-        ##配置pw
-        gwd::GWpublic_CfgPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw3" "vpls" "vpls1" "peer" $address13 "2000" "2000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "5"
-        gwd::GWpublic_CfgPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw6" "vpls" "vpls1" "peer" $address14 "5000" "6000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "6"
-        gwd::GWpublic_getPwInfo $telnet1 $matchType1 $Gpn_type1 $fileId "pw3" result
-        gwd::GWpublic_getPwInfo $telnet1 $matchType1 $Gpn_type1 $fileId "pw6" result
-        ###配置ac
-        PTN_UNI_AddInter $telnet1 $matchType1 $Gpn_type1 $fileId $Worklevel "1000" $GPNTestEth2
-        gwd::GWAc_AddVplsInfo $telnet1 $matchType1 $Gpn_type1 $fileId "ac1" "vpls1" "" $GPNTestEth2 "1000" "0" "none" "nochange" "1" "0" "0" "0x9100" "evc2"
-        #############################################配置7600-2#######################################################
-        PTN_NNI_AddInterIp $fileId $Worklevel $interface26 $ip35 $GPNPort12 $matchType2 $Gpn_type2 $telnet2
-        PTN_NNI_AddInterIp $fileId $Worklevel $interface27 $ip36 $GPNPort13 $matchType2 $Gpn_type2 $telnet2
+	gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw11"
+	##配置lsp
+	gwd::GWpublic_CfgLspTunnel $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3" $interface1 $ip31 "200" "200" "normal" "5"
+	gwd::GWpublic_CfgLspAddress $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3" $address13
+	gwd::GWpublic_CfgUndoShutLsp $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3"
+	gwd::GWpublic_showTunnelInfo $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3"
+	gwd::GWpublic_CfgLspTunnel $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6" $interface28 $ip36 "500" "600" "normal" "6"
+	gwd::GWpublic_CfgLspAddress $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6" $address14
+	gwd::GWpublic_CfgUndoShutLsp $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6"
+	gwd::GWpublic_showTunnelInfo $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6"
+	##配置pw
+	gwd::GWpublic_CfgPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw3" "vpls" "vpls1" "peer" $address13 "2000" "2000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "5"
+	gwd::GWpublic_CfgPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw6" "vpls" "vpls1" "peer" $address14 "5000" "6000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "6"
+	gwd::GWpublic_getPwInfo $telnet1 $matchType1 $Gpn_type1 $fileId "pw3" result
+	gwd::GWpublic_getPwInfo $telnet1 $matchType1 $Gpn_type1 $fileId "pw6" result
+	###配置ac
+	PTN_UNI_AddInter $telnet1 $matchType1 $Gpn_type1 $fileId $Worklevel "1000" $GPNTestEth2
+	gwd::GWAc_AddVplsInfo $telnet1 $matchType1 $Gpn_type1 $fileId "ac1" "vpls1" "" $GPNTestEth2 "1000" "0" "none" "nochange" "1" "0" "0" "0x9100" "evc2"
+	#############################################配置7600-2#######################################################
+	PTN_NNI_AddInterIp $fileId $Worklevel $interface26 $ip35 $GPNPort12 $matchType2 $Gpn_type2 $telnet2
+	PTN_NNI_AddInterIp $fileId $Worklevel $interface27 $ip36 $GPNPort13 $matchType2 $Gpn_type2 $telnet2
 	if {[string match "L2" $Worklevel]} {
-        	gwd::GWpublic_CfgVlanStack $telnet2 $matchType2 $Gpn_type2 $fileId $GPNPort12 "enable"
-        	gwd::GWpublic_CfgVlanStack $telnet2 $matchType2 $Gpn_type2 $fileId $GPNPort13 "enable"
+		gwd::GWpublic_CfgVlanStack $telnet2 $matchType2 $Gpn_type2 $fileId $GPNPort12 "enable"
+		gwd::GWpublic_CfgVlanStack $telnet2 $matchType2 $Gpn_type2 $fileId $GPNPort13 "enable"
 	}
-        ###配置vpls
-        gwd::GWVpls_AddInfo $telnet2 $matchType2 $Gpn_type2 $fileId "vpls2" "3" "elan" "flood" "false" "false" "false" "true" "2000" "" ""
-        ###配置lsp
-        gwd::GWpublic_CfgLspTunnel $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4" $interface26 $ip32 "400" "300" "normal" "7"
-        gwd::GWpublic_CfgLspAddress $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4" $address15
-        gwd::GWpublic_CfgUndoShutLsp $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4"
-        gwd::GWpublic_CfgLspTunnel $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6" $interface27 $ip34 "600" "500" "normal" "8"
-        gwd::GWpublic_CfgLspAddress $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6" $address16
-        gwd::GWpublic_CfgUndoShutLsp $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6"
-        ###配置pw
-        gwd::GWpublic_CfgPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw4" "vpls" "vpls2" "peer" $address15 "4000" "3000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "7"
-        gwd::GWpublic_CfgPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw6" "vpls" "vpls2" "peer" $address16 "6000" "5000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "8"
-        ###配置ac
-        PTN_UNI_AddInter $telnet2 $matchType2 $Gpn_type2 $fileId $Worklevel "2000" $GPNTestEth1
-        gwd::GWAc_AddVplsInfo $telnet2 $matchType2 $Gpn_type2 $fileId "ac2" "vpls2" "" $GPNTestEth1 "2000" "0" "none" "nochange" "1" "0" "0" "0x9100" "evc2"
-        gwd::Cfg_StreamActive $hGPNPort4Stream5 "TRUE"
-        gwd::Cfg_StreamActive $hGPNPort2Stream3 "TRUE"
-        gwd::Cfg_StreamActive $hGPNPort1Stream7 "TRUE"
-        foreach i "aGPNPort1Cnt1 aGPNPort2Cnt1 aGPNPort3Cnt1 aGPNPort4Cnt1" {
-          array set $i {cnt2 0 drop2 0 rate2 0 cnt3 0 cnt5 0 cnt6 0 drop6 0 rate6 0 cnt7 0} 
-        }
-        gwd::Start_SendFlow "$hGPNPort1Gen $hGPNPort2Gen $hGPNPort3Gen $hGPNPort4Gen"  "$hGPNPort1Ana $hGPNPort2Ana $hGPNPort3Ana $hGPNPort4Ana"
+	###配置vpls
+	gwd::GWVpls_AddInfo $telnet2 $matchType2 $Gpn_type2 $fileId "vpls2" "3" "elan" "flood" "false" "false" "false" "true" "2000" "" ""
+	###配置lsp
+	gwd::GWpublic_CfgLspTunnel $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4" $interface26 $ip32 "400" "300" "normal" "7"
+	gwd::GWpublic_CfgLspAddress $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4" $address15
+	gwd::GWpublic_CfgUndoShutLsp $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4"
+	gwd::GWpublic_CfgLspTunnel $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6" $interface27 $ip34 "600" "500" "normal" "8"
+	gwd::GWpublic_CfgLspAddress $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6" $address16
+	gwd::GWpublic_CfgUndoShutLsp $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6"
+	###配置pw
+	gwd::GWpublic_CfgPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw4" "vpls" "vpls2" "peer" $address15 "4000" "3000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "7"
+	gwd::GWpublic_CfgPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw6" "vpls" "vpls2" "peer" $address16 "6000" "5000" "" "nochange" "none" 1 0 "0x8100" "0x8100" "8"
+	###配置ac
+	PTN_UNI_AddInter $telnet2 $matchType2 $Gpn_type2 $fileId $Worklevel "2000" $GPNTestEth1
+	gwd::GWAc_AddVplsInfo $telnet2 $matchType2 $Gpn_type2 $fileId "ac2" "vpls2" "" $GPNTestEth1 "2000" "0" "none" "nochange" "1" "0" "0" "0x9100" "evc2"
+	gwd::Cfg_StreamActive $hGPNPort4Stream5 "TRUE"
+	gwd::Cfg_StreamActive $hGPNPort2Stream3 "TRUE"
+	gwd::Cfg_StreamActive $hGPNPort1Stream7 "TRUE"
+	foreach i "aGPNPort1Cnt1 aGPNPort2Cnt1 aGPNPort3Cnt1 aGPNPort4Cnt1" {
+	  array set $i {cnt2 0 drop2 0 rate2 0 cnt3 0 cnt5 0 cnt6 0 drop6 0 rate6 0 cnt7 0} 
+	}
+	gwd::Start_SendFlow "$hGPNPort1Gen $hGPNPort2Gen $hGPNPort3Gen $hGPNPort4Gen"  "$hGPNPort1Ana $hGPNPort2Ana $hGPNPort3Ana $hGPNPort4Ana"
 	if {$::cap_enable} {
 		gwd::Start_CapAllData ::capArr $hGPNPort1Cap $hGPNPort1CapAnalyzer
 		gwd::Start_CapAllData ::capArr $hGPNPort2Cap $hGPNPort2CapAnalyzer
@@ -2747,10 +2809,10 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 		Recustomization 0 0 0 1 0 0
 		after 5000
 	}
-        parray aGPNPort1Cnt1
-        parray aGPNPort2Cnt1
-        parray aGPNPort3Cnt1
-        parray aGPNPort4Cnt1
+	parray aGPNPort1Cnt1
+	parray aGPNPort2Cnt1
+	parray aGPNPort3Cnt1
+	parray aGPNPort4Cnt1
 	gwd::GWpublic_print "  " "抓包文件为GPN_PTN_003_$capId-p$GPNTestEth1_cap\($gpnIp2\).pcap" $fileId
 	gwd::GWpublic_print "  " "抓包文件为GPN_PTN_003_$capId-p$GPNTestEth2_cap\($gpnIp1\).pcap" $fileId
 	gwd::GWpublic_print "  " "抓包文件为GPN_PTN_003_$capId-p$GPNTestEth3_cap\($gpnIp1\).pcap" $fileId
@@ -2819,25 +2881,25 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 		gwd::GWpublic_print "OK" "NE3($gpnIp3)$GPNTestEth4\发送tag=3000的数据流，NE2($gpnIp2)\
 			$GPNTestEth1\收到tag=3000的数据流的速率为$aGPNPort1Cnt1(cnt5)，在$rateL-$rateR\范围内" $fileId
 	}
-        gwd::GWpublic_Getresource $telnet3 $matchType3 $Gpn_type3 $fileId resource2
-        send_log "\n resource1:$resource1"
-        send_log "\n resource2:$resource2"
-        if {$resource2 > [expr $resource1 + $resource1 * $errRate]} {
-        	gwd::GWpublic_print "NOK" "新建ELAN业务之前系统内存为$resource1\，之后系统内存为$resource2。内存变化不在允许误差$errRate\内" $fileId
-        	set flag3_case6	1
-        } else {	
-        	gwd::GWpublic_print "OK" "新建ELAN业务之前系统内存为$resource1\，之后系统内存为$resource2。内存变化在允许误差$errRate\内" $fileId
-        }
-        gwd::Stop_SendFlow "$hGPNPort1Gen $hGPNPort2Gen $hGPNPort3Gen $hGPNPort4Gen"  "$hGPNPort1Ana $hGPNPort2Ana $hGPNPort3Ana $hGPNPort4Ana"
+	gwd::GWpublic_Getresource $telnet3 $matchType3 $Gpn_type3 $fileId resource2
+	send_log "\n resource1:$resource1"
+	send_log "\n resource2:$resource2"
+	if {$resource2 > [expr $resource1 + $resource1 * $errRate]} {
+		gwd::GWpublic_print "NOK" "新建ELAN业务之前系统内存为$resource1\，之后系统内存为$resource2。内存变化不在允许误差$errRate\内" $fileId
+		set flag3_case6	1
+	} else {	
+		gwd::GWpublic_print "OK" "新建ELAN业务之前系统内存为$resource1\，之后系统内存为$resource2。内存变化在允许误差$errRate\内" $fileId
+	}
+	gwd::Stop_SendFlow "$hGPNPort1Gen $hGPNPort2Gen $hGPNPort3Gen $hGPNPort4Gen"  "$hGPNPort1Ana $hGPNPort2Ana $hGPNPort3Ana $hGPNPort4Ana"
 	puts $fileId ""
-        if {$flag3_case6 == 1} {
-        	set flagCase6 1
-        	gwd::GWpublic_print "NOK" "FD3（结论）在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务" $fileId
-        } else {
-        	gwd::GWpublic_print "OK" "FD3（结论）在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务" $fileId
-        }
+	if {$flag3_case6 == 1} {
+		set flagCase6 1
+		gwd::GWpublic_print "NOK" "FD3（结论）在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务" $fileId
+	} else {
+		gwd::GWpublic_print "OK" "FD3（结论）在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务" $fileId
+	}
 	puts $fileId ""
-        gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务相互是否有影响  测试结束=====\n"
+	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====在设备配置有ELINE业务的情况下添加一条ELAN业务，测试两种业务相互是否有影响  测试结束=====\n"
 	incr tcId
 	gwd::GWpublic_saveTCCfg 1 $fileId "GPN_PTN_003_$tcId.xml" [pwd]/Untitled
 	incr cfgId
@@ -2845,7 +2907,7 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	if {$lFailFileTmp != ""} {
 		set lFailFile [concat $lFailFile $lFailFileTmp]
 	}
-        puts $fileId "======================================================================================\n"
+	puts $fileId "======================================================================================\n"
 	if {$flagCase6 == 1} {
 		gwd::GWpublic_print "NOK" "TestCase 6测试结论" $fileId
 	} else {
@@ -2857,46 +2919,46 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	puts $fileId "**************************************************************************************\n"
 	puts $fileId ""
 	gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "===恢复初始化配置...\n"
-        lappend flagDel [gwd::GWAc_DelActPw $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"]
-        lappend flagDel [gwd::GWAc_DelName $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"]
-        lappend flagDel [gwd::GWAc_DelName $telnet3 $matchType3 $Gpn_type3 $fileId "ac3"]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface23 $matchType3 $Gpn_type3 $telnet3]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface24 $matchType3 $Gpn_type3 $telnet3]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw1"]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw3"]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw4"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet3 $matchType3 $Gpn_type3 $fileId "lsp1"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4"]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface10 $matchType3 $Gpn_type3 $telnet3]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface14 $matchType3 $Gpn_type3 $telnet3]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface25 $matchType3 $Gpn_type3 $telnet3]
+	lappend flagDel [gwd::GWAc_DelActPw $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"]
+	lappend flagDel [gwd::GWAc_DelName $telnet3 $matchType3 $Gpn_type3 $fileId "ac1"]
+	lappend flagDel [gwd::GWAc_DelName $telnet3 $matchType3 $Gpn_type3 $fileId "ac3"]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface23 $matchType3 $Gpn_type3 $telnet3]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface24 $matchType3 $Gpn_type3 $telnet3]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw1"]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw3"]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet3 $matchType3 $Gpn_type3 $fileId "pw4"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet3 $matchType3 $Gpn_type3 $fileId "lsp1"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet3 $matchType3 $Gpn_type3 $fileId "lsp3"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet3 $matchType3 $Gpn_type3 $fileId "lsp4"]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface10 $matchType3 $Gpn_type3 $telnet3]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface14 $matchType3 $Gpn_type3 $telnet3]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface25 $matchType3 $Gpn_type3 $telnet3]
 	lappend flagDel [gwd::GWVpls_DelInfo $telnet3 $matchType3 $Gpn_type3 $fileId "vpls3"]
-        
-        lappend flagDel [gwd::GWAc_DelActPw $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"]
-        lappend flagDel [gwd::GWAc_DelName $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"]
-        lappend flagDel [gwd::GWAc_DelName $telnet1 $matchType1 $Gpn_type1 $fileId "ac1"]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface12 $matchType1 $Gpn_type1 $telnet1]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface30 $matchType1 $Gpn_type1 $telnet1]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw1"]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw3"]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw6"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet1 $matchType1 $Gpn_type1 $fileId "lsp1"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6"]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface11 $matchType1 $Gpn_type1 $telnet1]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface1 $matchType1 $Gpn_type1 $telnet1]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface28 $matchType1 $Gpn_type1 $telnet1]
+	
+	lappend flagDel [gwd::GWAc_DelActPw $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"]
+	lappend flagDel [gwd::GWAc_DelName $telnet1 $matchType1 $Gpn_type1 $fileId "ac50"]
+	lappend flagDel [gwd::GWAc_DelName $telnet1 $matchType1 $Gpn_type1 $fileId "ac1"]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface12 $matchType1 $Gpn_type1 $telnet1]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface30 $matchType1 $Gpn_type1 $telnet1]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw1"]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw3"]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet1 $matchType1 $Gpn_type1 $fileId "pw6"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet1 $matchType1 $Gpn_type1 $fileId "lsp1"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet1 $matchType1 $Gpn_type1 $fileId "lsp3"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet1 $matchType1 $Gpn_type1 $fileId "lsp6"]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface11 $matchType1 $Gpn_type1 $telnet1]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface1 $matchType1 $Gpn_type1 $telnet1]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface28 $matchType1 $Gpn_type1 $telnet1]
 	lappend flagDel [gwd::GWVpls_DelInfo $telnet1 $matchType1 $Gpn_type1 $fileId "vpls1"]
-        
-        lappend flagDel [gwd::GWAc_DelName $telnet2 $matchType2 $Gpn_type2 $fileId "ac2"]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface29 $matchType2 $Gpn_type2 $telnet2]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw4"]
-        lappend flagDel [gwd::GWStaPw_DelPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw6"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4"]
-        lappend flagDel [gwd::GWStaLsp_DelLspName $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6"]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface26 $matchType2 $Gpn_type2 $telnet2]
-        lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface27 $matchType2 $Gpn_type2 $telnet2]
+	
+	lappend flagDel [gwd::GWAc_DelName $telnet2 $matchType2 $Gpn_type2 $fileId "ac2"]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface29 $matchType2 $Gpn_type2 $telnet2]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw4"]
+	lappend flagDel [gwd::GWStaPw_DelPw $telnet2 $matchType2 $Gpn_type2 $fileId "pw6"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet2 $matchType2 $Gpn_type2 $fileId "lsp4"]
+	lappend flagDel [gwd::GWStaLsp_DelLspName $telnet2 $matchType2 $Gpn_type2 $fileId "lsp6"]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface26 $matchType2 $Gpn_type2 $telnet2]
+	lappend flagDel [PTN_DelInterVid $fileId $Worklevel $interface27 $matchType2 $Gpn_type2 $telnet2]
 	lappend flagDel [gwd::GWVpls_DelInfo $telnet2 $matchType2 $Gpn_type2 $fileId "vpls2"]
 	
 	if {[string match "L2" $Worklevel]} {
@@ -2908,26 +2970,26 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 		lappend flagDel [gwd::GWpublic_CfgVlanStack $telnet2 $matchType2 $Gpn_type2 $fileId $GPNPort13 "none"]
 	}
 	
-        foreach port1 $portList1 {
+	foreach port1 $portList1 {
 		if {[string match -nocase "L3" $Worklevel] && [string match -nocase "PTN" $SoftVer]} {
 			lappend flagDel [gwd::GWL2_AddPort $telnet1 $matchType1 $Gpn_type1 $fileId $port1 "enable" "disable"]
 		}
-        } 
-        foreach port2 $portList2 {
+	} 
+	foreach port2 $portList2 {
 		if {[string match -nocase "L3" $Worklevel] && [string match -nocase "PTN" $SoftVer]} {
 			lappend flagDel [gwd::GWL2_AddPort $telnet2 $matchType2 $Gpn_type2 $fileId $port2 "enable" "disable"]
 		}
-         }
-        foreach port3 $portList3 {
+	 }
+	foreach port3 $portList3 {
 		if {[string match -nocase "L3" $Worklevel] && [string match -nocase "PTN" $SoftVer]} {
 			lappend flagDel [gwd::GWL2_AddPort $telnet3 $matchType3 $Gpn_type3 $fileId $port3 "enable" "disable"]
 		}
-        }
-        lappend flagDel [gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort7 "undo shutdown"]
-        lappend flagDel [gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort9 "undo shutdown"]
+	}
+	lappend flagDel [gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort7 "undo shutdown"]
+	lappend flagDel [gwd::GWpublic_CfgPortState $telnet1 $matchType1 $Gpn_type1 $fileId $GPNPort9 "undo shutdown"]
 	gwd::GWpublic_printAbnormal $fileId $fd_log $flagDel "FLAGD" $startSeconds "测试结束后配置恢复" "测试结束后配置恢复" "GPN_PTN_003"
 	gwd::GWpublic_printAbnormal $fileId $fd_log $FLAGF "FLAGF" $startSeconds $lFailFile "测试过程中所有配置文件都上传成功" "GPN_PTN_003"
-        
+	
 	chan seek $fileId 0
 	puts $fileId "\n**************************************************************************************\n"
 	puts $fileId "**************************************************************************************\n"
@@ -2946,29 +3008,29 @@ gwd::GWpublic_sendSameStrToFiles "$fd_debug $fd_log $fileId" "=====trunk模式为sh
 	gwd::GWpublic_print [expr {($flagCase6 == 0) ? "OK" : "NOK"}] "Test Case 6测试结果" $fileId
 	puts $fileId ""
 	puts $fileId ""
-        gwd::GWpublic_print "== FA1 == [expr {($flag1_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1:1、trunk组成员同板卡，测试E-LINE与trunk互操作" $fileId
-        gwd::GWpublic_print "== FA2 == [expr {($flag2_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1+1、trunk组成员同板卡，测试E-LINE与trunk互操作" $fileId
-        gwd::GWpublic_print "== FA3 == [expr {($flag3_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing、trunk组成员同板卡，测试E-LINE与trunk互操作" $fileId
-        gwd::GWpublic_print "== FA4 == [expr {($flag4_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡添加\
-        				down端口$downPort_dev1	$matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡添加down端口$downPort_dev3\测试业务" $fileId
-        gwd::GWpublic_print "== FA5 == [expr {($flag5_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡删除\
-        				down端口$downPort_dev1 $matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡删除down端口$downPort_dev3\测试业务" $fileId
-        gwd::GWpublic_print "== FA6 == [expr {($flag6_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡添加\
-        				up端口$GPNPort9 $matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡添加up端口$GPNPort10\测试业务" $fileId
-        gwd::GWpublic_print "== FA7 == [expr {($flag7_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡删除\
-        				up端口$GPNPort9 $matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡删除up端口$GPNPort10\测试业务" $fileId
-        gwd::GWpublic_print "== FA8 == [expr {($flag8_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing、trunk组成员跨板卡，测试E-LINE与trunk互操作" $fileId
-        gwd::GWpublic_print "== FA9 == [expr {($flag9_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1+1、trunk组成员跨板卡，测试E-LINE与trunk互操作" $fileId
-        gwd::GWpublic_print "== FA10 == [expr {($flag10_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1:1、trunk组成员跨板卡，测试E-LINE与trunk互操作" $fileId
-        gwd::GWpublic_print "== FA11 == [expr {($flag11_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡添加\
-        				down端口$downPort_dev1 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡添加down端口$downPort_dev3\测试业务" $fileId
-        gwd::GWpublic_print "== FA12 == [expr {($flag12_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡删除\
-        				down端口$downPort_dev1 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡删除down端口$downPort_dev3\测试业务" $fileId
-        gwd::GWpublic_print "== FA13 == [expr {($flag13_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡添加\
-        				up端口$GPNPort7 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡添加up端口$GPNPort8\测试业务" $fileId
-        gwd::GWpublic_print "== FA14 == [expr {($flag14_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡删除\
-        				up端口$GPNPort7 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡删除up端口$GPNPort8\测试业务" $fileId
-        gwd::GWpublic_print "== FB6 == [expr {($flag15_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，AC口为trunk口测试E-LINE业务" $fileId
+	gwd::GWpublic_print "== FA1 == [expr {($flag1_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1:1、trunk组成员同板卡，测试E-LINE与trunk互操作" $fileId
+	gwd::GWpublic_print "== FA2 == [expr {($flag2_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1+1、trunk组成员同板卡，测试E-LINE与trunk互操作" $fileId
+	gwd::GWpublic_print "== FA3 == [expr {($flag3_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing、trunk组成员同板卡，测试E-LINE与trunk互操作" $fileId
+	gwd::GWpublic_print "== FA4 == [expr {($flag4_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡添加\
+					down端口$downPort_dev1	$matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡添加down端口$downPort_dev3\测试业务" $fileId
+	gwd::GWpublic_print "== FA5 == [expr {($flag5_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡删除\
+					down端口$downPort_dev1 $matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡删除down端口$downPort_dev3\测试业务" $fileId
+	gwd::GWpublic_print "== FA6 == [expr {($flag6_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡添加\
+					up端口$GPNPort9 $matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡添加up端口$GPNPort10\测试业务" $fileId
+	gwd::GWpublic_print "== FA7 == [expr {($flag7_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort7\在同板卡删除\
+					up端口$GPNPort9 $matchType3 t1成员$GPNPort6,$GPNPort8\在同板卡删除up端口$GPNPort10\测试业务" $fileId
+	gwd::GWpublic_print "== FA8 == [expr {($flag8_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing、trunk组成员跨板卡，测试E-LINE与trunk互操作" $fileId
+	gwd::GWpublic_print "== FA9 == [expr {($flag9_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1+1、trunk组成员跨板卡，测试E-LINE与trunk互操作" $fileId
+	gwd::GWpublic_print "== FA10 == [expr {($flag10_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为lag1:1、trunk组成员跨板卡，测试E-LINE与trunk互操作" $fileId
+	gwd::GWpublic_print "== FA11 == [expr {($flag11_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡添加\
+					down端口$downPort_dev1 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡添加down端口$downPort_dev3\测试业务" $fileId
+	gwd::GWpublic_print "== FA12 == [expr {($flag12_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡删除\
+					down端口$downPort_dev1 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡删除down端口$downPort_dev3\测试业务" $fileId
+	gwd::GWpublic_print "== FA13 == [expr {($flag13_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡添加\
+					up端口$GPNPort7 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡添加up端口$GPNPort8\测试业务" $fileId
+	gwd::GWpublic_print "== FA14 == [expr {($flag14_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，$matchType1 t1成员$GPNPort5,$GPNPort9\在跨板卡删除\
+					up端口$GPNPort7 $matchType3 t1成员$GPNPort6,$GPNPort10\在跨板卡删除up端口$GPNPort8\测试业务" $fileId
+	gwd::GWpublic_print "== FB6 == [expr {($flag15_case1 == 1) ? "NOK" : "OK"}]" "（结论）trunk模式为sharing，AC口为trunk口测试E-LINE业务" $fileId
 	gwd::GWpublic_print "== FB7 == [expr {($flag1_case3 == 1) ? "NOK" : "OK"}]" "（结论）配置OAM前测试E-LINE业务" $fileId
 	gwd::GWpublic_print "== FB8 == [expr {($flag2_case3 == 1) ? "NOK" : "OK"}]" "（结论）配置LSP的OAM后测试E-LINE业务" $fileId
 	gwd::GWpublic_print "== FB9 == [expr {($flag3_case3 == 1) ? "NOK" : "OK"}]" "（结论）配置PW的OAM后测试E-LINE业务" $fileId
