@@ -1,4 +1,3 @@
-
 #!/bin/sh
 # PTN_Mode_Function.tcl \
 exec tclsh "$0" ${1+"$@"}
@@ -8453,7 +8452,7 @@ proc classificationStatisticsPortRxCnt10 {statPara hAna aRecCnt} {
 }
 
 ########################################################################################################
-#函数功能：GPN上trunk组模式测试
+#函数功能：GPN上trunk组模式测试(T3模型nni口trunk测试)
 #输入参数:ModeFlag:模式类型
 #	  slavePort:从端口
 #	  masterPort:端口组的主端口
@@ -8469,7 +8468,7 @@ proc Test_TrunkModeAdd {spawn_id matchType dutType fileId ModeFlag trunKName mas
                 gwd::Start_CapAllData ::capArr $::hGPNPort3Cap $::hGPNPort3CapAnalyzer 
                 gwd::Start_CapAllData ::capArr $::hGPNPort4Cap $::hGPNPort4CapAnalyzer
         }
-    set lport1 "$::hGPNPort1 $::hGPNPort2 $::hGPNPort3 $::hGPNPort4"
+    set lport1 "$::hGPNPort3 $::hGPNPort4"
 	stc::perform ResultsClearAll -PortList $lport1
     gwd::Start_SendFlow "$::hGPNPort3Gen $::hGPNPort4Gen"  "$::hGPNPort3Ana $::hGPNPort4Ana"
     after 10000
@@ -8888,6 +8887,450 @@ proc Test_TrunkModeAdd {spawn_id matchType dutType fileId ModeFlag trunKName mas
 	return $flag
 }
 ########################################################################################################
+#函数功能：GPN上trunk组模式测试(T3模型uni口trunk测试)
+#输入参数:ModeFlag:模式类型
+#	  slavePort:从端口
+#	  masterPort:端口组的主端口
+#输出参数：无
+#返回值： 无
+#作者：吴军妮(唐丽春修改)
+########################################################################################################
+proc Test_TrunkModeAddUNI {spawn_id matchType dutType fileId ModeFlag trunKName masterPort slavePort ptn003_case1_cnt caseId} {
+	global capId
+	global trunkSwTime
+	set flag 0
+        if {$::cap_enable} {
+                gwd::Start_CapAllData ::capArr $::hGPNPort4Cap $::hGPNPort4CapAnalyzer 
+                gwd::Start_CapAllData ::capArr $::hGPNPort5Cap $::hGPNPort5CapAnalyzer
+        }
+    set lport1 "$::hGPNPort4 $::hGPNPort5"
+	stc::perform ResultsClearAll -PortList $lport1
+    gwd::Start_SendFlow "$::hGPNPort4Gen $::hGPNPort5Gen"  "$::hGPNPort4Ana $::hGPNPort5Ana"
+    after 10000
+	incr capId
+	if {$::cap_enable} {
+                gwd::Stop_CapData $::hGPNPort4Cap 1 "$caseId\_$capId-p$::GPNTestEth4_cap\($::gpnIp3).pcap"
+                gwd::Stop_CapData $::hGPNPort5Cap 1 "$caseId\_$capId-p$::GPNTestEth5_cap\($::gpnIp1).pcap"
+	}
+	set filterCnt 0
+	while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+		if {$filterCnt == $::filterGlobalCnt} {
+			break
+		}
+		incr filterCnt
+		Recustomization 0 0 1 1 0 0
+		after 3000
+	}
+	set filterCnt 0
+	while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+		if {$filterCnt == $::filterGlobalCnt} {
+			break
+		}
+		incr filterCnt
+		Recustomization 0 0 1 1 0 0
+		after 3000
+	}
+        parray aGPNPort4Cnt1
+        parray aGPNPort5Cnt1
+	gwd::GWpublic_print "  " "抓包文件为$caseId\_$capId-p$::GPNTestEth4_cap\($::gpnIp3).pcap" $fileId
+	gwd::GWpublic_print "  " "抓包文件为$caseId\_$capId-p$::GPNTestEth5_cap\($::gpnIp1).pcap" $fileId
+	if {$aGPNPort4Cnt1(cnt2) < $::rateL || $aGPNPort4Cnt1(cnt2) > $::rateR} {
+		set flag 1
+		gwd::GWpublic_print "NOK" "$matchType trunk组$trunKName\模式为$ModeFlag\时NE1($::gpnIp1)$::GPNTestEth5\发送tag=50的数据流，NE3($::gpnIp3)\
+			$::GPNTestEth4\收到tag=50的数据流的速率为$aGPNPort4Cnt1(cnt2)，没在$::rateL-$::rateR\范围内" $fileId
+	} else {
+		gwd::GWpublic_print "OK" "$matchType trunk组$trunKName\模式为$ModeFlag\时NE1($::gpnIp1)$::GPNTestEth5\发送tag=50的数据流，NE3($::gpnIp3)\
+			$::GPNTestEth4\收到tag=50的数据流的速率为$aGPNPort4Cnt1(cnt2)，在$::rateL-$::rateR\范围内" $fileId
+	}
+	if {$aGPNPort5Cnt1(cnt6) < $::rateL || $aGPNPort5Cnt1(cnt6) > $::rateR} {
+		set flag 1
+		gwd::GWpublic_print "NOK" "$matchType trunk组$trunKName\模式为$ModeFlag\时NE3($::gpnIp3)$::GPNTestEth4\发送tag=1000的数据流，NE1($::gpnIp1)\
+			$::GPNTestEth5\收到tag=1000的数据流的速率为$aGPNPort5Cnt1(cnt6)，没在$::rateL-$::rateR\范围内" $fileId
+	} else {
+		gwd::GWpublic_print "OK" "$matchType trunk组$trunKName\模式为$ModeFlag\时NE3($::gpnIp3)$::GPNTestEth4\发送tag=1000的数据流，NE1($::gpnIp1)\
+			$::GPNTestEth5\收到tag=1000的数据流的速率为$aGPNPort5Cnt1(cnt6)，在$::rateL-$::rateR\范围内" $fileId
+	}
+    for {set i 1} {$i < [expr $ptn003_case1_cnt+1]} {incr i} {
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+                        
+                        
+            set FrameRate21 $aGPNPort4Cnt1(rate2)
+            set FrameRate61 $aGPNPort5Cnt1(rate6)
+            set DropFrame21 $aGPNPort4Cnt1(drop2)
+            set DropFrame61 $aGPNPort5Cnt1(drop6)
+			send_log "\nmasterFrameRate21:$FrameRate21"
+			send_log "\nmasterFrameRate61:$FrameRate61"
+			send_log "\nmasterDropFrame21:$DropFrame21"
+			send_log "\nmasterDropFrame61:$DropFrame61"
+			gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $masterPort "shutdown"
+			after 7000
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+                        parray aGPNPort4Cnt1
+                        parray aGPNPort5Cnt1
+                        set FrameRate22 $aGPNPort4Cnt1(rate2)
+                        set FrameRate62 $aGPNPort5Cnt1(rate6)
+                        set DropFrame22 $aGPNPort4Cnt1(drop2)
+                        set DropFrame62 $aGPNPort5Cnt1(drop6)
+                        send_log "\nmasterFrameRate22:$FrameRate22"
+                        send_log "\nmasterFrameRate62:$FrameRate62"
+                        send_log "\nmasterDropFrame22:$DropFrame22"
+                        send_log "\nmasterDropFrame62:$DropFrame62"
+			set printWord "主端口" 
+			if {$FrameRate22 != 0} {
+				set DhTime2 [expr ($DropFrame22-$DropFrame21)*1000/$FrameRate22]
+				if {$DhTime2>$trunkSwTime} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\down操作后，TC4口接收倒换时间为$DhTime2\ms大于最大允许倒换时间$trunkSwTime\ms" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\down操作后，TC4口接收倒换时间为$DhTime2\ms小于最大允许倒换时间$trunkSwTime\ms" $fileId
+				}
+			} else {
+				set flag 1
+				gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\down操作后TC4口收不到流，无法测试TC3发送倒换时间" $fileId
+			}
+			if {$FrameRate62 != 0} {
+				set DhTime6 [expr ($DropFrame62-$DropFrame61)*1000/$FrameRate62]
+				if {$DhTime6>$trunkSwTime} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\down操作后，TC3口接收倒换时间为$DhTime6\ms大于最大允许倒换时间$trunkSwTime\ms" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\down操作后，TC3口接收倒换时间为$DhTime6\ms小于最大允许倒换时间$trunkSwTime\ms" $fileId
+				}
+			} else {
+				set flag 1
+				gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\down操作后TC3口收不到流，无法测试TC4发送倒换时间" $fileId
+			}
+			after 2000
+			gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $masterPort "undo shutdown"
+            after 60000 ;#等待回切时间
+            after 2000
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+                        parray aGPNPort4Cnt1
+                        parray aGPNPort5Cnt1
+                        set FrameRate23 $aGPNPort4Cnt1(rate2)
+                        set FrameRate63 $aGPNPort5Cnt1(rate6)
+                        set DropFrame23 $aGPNPort4Cnt1(drop2)
+                        set DropFrame63 $aGPNPort5Cnt1(drop6)
+                        send_log "\nmasterFrameRate23:$FrameRate23"
+                        send_log "\nmasterFrameRate63:$FrameRate63"
+                        send_log "\nmasterDropFrame23:$DropFrame23"
+                        send_log "\nmasterDropFrame63:$DropFrame63"
+						
+			if {$FrameRate23 != 0} {
+				set DhTime2 [expr ($DropFrame23-$DropFrame21)*1000/$FrameRate23]
+				if {$DhTime2>$trunkSwTime} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\up操作后，TC4口接收倒换时间为$DhTime2\ms大于最大允许倒换时间$trunkSwTime\ms" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\up操作后，TC4口接收倒换时间为$DhTime2\ms小于最大允许倒换时间$trunkSwTime\ms" $fileId
+				}
+			} else {
+				set flag 1
+				gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\up操作后TC4口接收不到流，无法测试TC3发送倒换时间" $fileId
+			}
+			if {$FrameRate63 != 0} {
+				set DhTime6 [expr ($DropFrame63-$DropFrame61)*1000/$FrameRate63]
+				if {$DhTime6>$trunkSwTime} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\up操作后，TC3口接收倒换时间为$DhTime6\ms大于最大允许倒换时间$trunkSwTime\ms" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\up操作后，TC3口接收倒换时间为$DhTime6\ms小于最大允许倒换时间$trunkSwTime\ms" $fileId
+				}
+			} else {
+				set flag 1
+				gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$masterPort\up操作后TC3接收不到流，无法测试TC4倒换时间" $fileId
+			}
+	}
+	after 60000;###等待回切时间
+	stc::perform ResultsClearAll -PortList $lport1
+	for {set i 1} {$i < [expr $ptn003_case1_cnt+1]} {incr i} {
+		set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+			set filterCnt 0
+			while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+				if {$filterCnt == $::filterGlobalCnt} {
+					break
+				}
+				incr filterCnt
+				Recustomization 0 0 1 1 0 0
+				after 3000
+			}
+        set FrameRate21 $aGPNPort4Cnt1(rate2)
+        set FrameRate61 $aGPNPort5Cnt1(rate6)
+        set DropFrame21 $aGPNPort4Cnt1(drop2)
+        set DropFrame61 $aGPNPort5Cnt1(drop6)
+		send_log "\nslaveFrameRate21:$FrameRate21"
+		send_log "\nslaveFrameRate61:$FrameRate61"
+		send_log "\nslaveDropFrame21:$DropFrame21"
+		send_log "\nslaveDropFrame61:$DropFrame61"
+		gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $slavePort "shutdown"
+		after 5000
+		set filterCnt 0
+		while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+			if {$filterCnt == $::filterGlobalCnt} {
+				break
+			}
+			incr filterCnt
+			Recustomization 0 0 1 1 0 0
+			after 3000
+		}
+		set filterCnt 0
+		while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+			if {$filterCnt == $::filterGlobalCnt} {
+				break
+			}
+			incr filterCnt
+			Recustomization 0 0 1 1 0 0
+			after 3000
+		}
+        parray aGPNPort4Cnt1
+        parray aGPNPort5Cnt1
+        set FrameRate22 $aGPNPort4Cnt1(rate2)
+        set FrameRate62 $aGPNPort5Cnt1(rate6)
+        set DropFrame22 $aGPNPort4Cnt1(drop2)
+        set DropFrame62 $aGPNPort5Cnt1(drop6)
+        send_log "\nslaveFrameRate22:$FrameRate22"
+        send_log "\nslaveFrameRate62:$FrameRate62"
+        send_log "\nslaveDropFrame22:$DropFrame22"
+        send_log "\nslaveDropFrame62:$DropFrame62"
+		set printWord "从端口"
+		if {$FrameRate22 != 0} {
+				set DropFrame2 [expr $DropFrame22-$DropFrame21]
+				if {$DropFrame2>0} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC4口接收到的流业务发生丢包" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC4口接收到的流业务不丢包" $fileId
+				}
+		} else {
+			set flag 1
+			gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后业务不通，TC4口无法测试TC3口发送倒换时间" $fileId
+		}
+		if {$FrameRate62 != 0} {
+				set DropFrame6 [expr $DropFrame62-$DropFrame61]
+				if {$DropFrame6>0} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC3口接收到的流业务发生丢包" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC3口接收到的流业务不丢包" $fileId
+				}
+		} else {
+			set flag 1
+			gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后业务不通，TC4口无法测试TC3口发送倒换时间" $fileId
+		}
+		gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $slavePort "undo shutdown"
+		after 5000
+		set filterCnt 0
+		while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+			if {$filterCnt == $::filterGlobalCnt} {
+				break
+			}
+			incr filterCnt
+			Recustomization 0 0 1 1 0 0
+			after 5000
+		}
+		set filterCnt 0
+		while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+			if {$filterCnt == $::filterGlobalCnt} {
+				break
+			}
+			incr filterCnt
+			Recustomization 0 0 1 1 0 0
+			after 5000
+		}
+        parray aGPNPort4Cnt1
+        parray aGPNPort5Cnt1
+        set FrameRate23 $aGPNPort4Cnt1(rate2)
+        set FrameRate63 $aGPNPort5Cnt1(rate6)
+        set DropFrame23 $aGPNPort4Cnt1(drop2)
+        set DropFrame63 $aGPNPort5Cnt1(drop6)
+        send_log "\nslaveFrameRate23:$FrameRate23"
+        send_log "\nslaveFrameRate63:$FrameRate63"
+        send_log "\nslaveDropFrame23:$DropFrame23"
+        send_log "\nslaveDropFrame63:$DropFrame63"
+		if {$FrameRate23 != 0} {
+				set DropFrame2 [expr $DropFrame23-$DropFrame21]
+				if {$DropFrame2>0} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC4口接收到的流业务发生丢包" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC4口接收到的流业务不丢包" $fileId
+				}
+		} else {
+			set flag 1
+			gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后业务不通，TC4口无法测试TC3发送倒换时间" $fileId
+		}
+		if {$FrameRate63 != 0} {
+				set DropFrame6 [expr $DropFrame63-$DropFrame61]
+				if {$DropFrame6>0} {
+					set flag 1
+					gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC3口接收到的流业务发生丢包" $fileId
+				} else {
+					gwd::GWpublic_print "OK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后，TC3口接收到的流业务不丢包" $fileId
+				}
+		} else {
+			set flag 1
+			gwd::GWpublic_print "NOK" "第$i\次$matchType trunk组$trunKName$printWord$slavePort\down操作后业务不通，TC4口无法测试TC3口发送倒换时间" $fileId
+		}
+	}
+	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $masterPort "shutdown"
+	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $slavePort "shutdown"
+	after 6000
+	set filterCnt 0
+	while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+		if {$filterCnt == $::filterGlobalCnt} {
+			break
+		}
+		incr filterCnt
+		Recustomization 0 0 1 1 0 0
+		after 3000
+	}
+	set filterCnt 0
+	while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+		if {$filterCnt == $::filterGlobalCnt} {
+			break
+		}
+		incr filterCnt
+		Recustomization 0 0 1 1 0 0
+		after 3000
+	}
+    parray aGPNPort5Cnt1
+    parray aGPNPort4Cnt1
+    if {$aGPNPort4Cnt1(cnt2)!=0} {
+		set flag 1
+		gwd::GWpublic_print "NOK" "$matchType trunk组$trunKName\模式为$ModeFlag\时shutdownTRUNK组所有端口成员NE1($::gpnIp1)$::GPNTestEth5\发送tag=50的数据流，\
+			NE3($::gpnIp3)$::GPNTestEth4\收到tag=50的数据流的速率应为0，实为$aGPNPort4Cnt1(cnt2)" $fileId
+	} else {
+		gwd::GWpublic_print "OK" "$matchType trunk组$trunKName\模式为$ModeFlag\时shutdownTRUNK组所有端口成员NE1($::gpnIp1)$::GPNTestEth5\发送tag=50的数据流，\
+			NE3($::gpnIp3)$::GPNTestEth4\收到tag=50的数据流的速率应为0，实为$aGPNPort4Cnt1(cnt2)" $fileId
+	}
+	if {$aGPNPort5Cnt1(cnt6)!=0} {
+		set flag 1
+		gwd::GWpublic_print "NOK" "$matchType trunk组$trunKName\模式为$ModeFlag\时shutdownTRUNK组所有端口成员NE3($::gpnIp3)$::GPNTestEth4\发送tag=1000的数据流，\
+			NE1($::gpnIp1)$::GPNTestEth5\收到tag=1000的数据流的速率应为0，实为$aGPNPort5Cnt1(cnt6)" $fileId
+	} else {
+		gwd::GWpublic_print "OK" "$matchType trunk组$trunKName\模式为$ModeFlag\时shutdownTRUNK组所有端口成员NE3($::gpnIp3)$::GPNTestEth4\发送tag=1000的数据流，\
+			NE1($::gpnIp1)$::GPNTestEth5\收到tag=1000的数据流的速率应为0，实为$aGPNPort5Cnt1(cnt6)" $fileId
+	}
+
+	foreach port1 "$masterPort $slavePort" port2 "$slavePort $masterPort" {
+		gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $port1 "undo shutdown"
+		gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $port2 "shutdown"
+		after 60000 ;#等待回切时间
+		if {$::cap_enable} {
+			gwd::Start_CapAllData ::capArr $::hGPNPort5Cap $::hGPNPort5CapAnalyzer 
+			gwd::Start_CapAllData ::capArr $::hGPNPort4Cap $::hGPNPort4CapAnalyzer
+		}
+		gwd::Start_SendFlow "$::hGPNPort5Gen $::hGPNPort4Gen"  "$::hGPNPort5Ana $::hGPNPort4Ana"
+		after 10000
+		incr capId
+		if {$::cap_enable} {
+			gwd::Stop_CapData $::hGPNPort5Cap 1 "$caseId\_$capId-p$::GPNTestEth5_cap\($::gpnIp1).pcap"	
+			gwd::Stop_CapData $::hGPNPort4Cap 1 "$caseId\_$capId-p$::GPNTestEth4_cap\($::gpnIp3).pcap"
+		}
+		set filterCnt 0
+		while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort5Ana aGPNPort5Cnt1]} {
+			if {$filterCnt == $::filterGlobalCnt} {
+				break
+			}
+			incr filterCnt
+			Recustomization 0 0 1 1 0 0
+			after 5000
+		}
+		set filterCnt 0
+		while {[classificationStatisticsPortRxCnt10 1 $::hGPNPort4Ana aGPNPort4Cnt1]} {
+			if {$filterCnt == $::filterGlobalCnt} {
+				break
+			}
+			incr filterCnt
+			Recustomization 0 0 1 1 0 0
+			after 5000
+		}
+		parray aGPNPort5Cnt1
+		parray aGPNPort4Cnt1
+		gwd::GWpublic_print "  " "抓包文件为$caseId\_$capId-p$::GPNTestEth5_cap\($::gpnIp1).pcap" $fileId
+		gwd::GWpublic_print "  " "抓包文件为$caseId\_$capId-p$::GPNTestEth4_cap\($::gpnIp3).pcap" $fileId
+		if {$aGPNPort4Cnt1(cnt2) < $::rateL || $aGPNPort4Cnt1(cnt2) > $::rateR} {
+			set flag 1
+			gwd::GWpublic_print "NOK" "$matchType trunk组$trunKName\模式为$ModeFlag\时trunk组端口$port1 up $port2 down NE1($::gpnIp1)$::GPNTestEth5\
+				发送tag=50的数据流，NE3($::gpnIp3)$::GPNTestEth4\收到tag=50的数据流的速率为$aGPNPort4Cnt1(cnt2)，没在$::rateL-$::rateR\范围内" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "$matchType trunk组$trunKName\模式为$ModeFlag\时trunk组端口$port1 up $port2 down NE1($::gpnIp1)$::GPNTestEth5\
+				发送tag=50的数据流，NE3($::gpnIp3)$::GPNTestEth4\收到tag=50的数据流的速率为$aGPNPort4Cnt1(cnt2)，在$::rateL-$::rateR\范围内" $fileId
+		}
+		if {$aGPNPort5Cnt1(cnt6) < $::rateL || $aGPNPort5Cnt1(cnt6) > $::rateR} {
+			set flag 1
+			gwd::GWpublic_print "NOK" "$matchType trunk组$trunKName\模式为$ModeFlag\时trunk组端口$port1 up $port2 down NE3($::gpnIp3)$::GPNTestEth4\
+				发送tag=1000的数据流，NE1($::gpnIp1)$::GPNTestEth5\收到tag=1000的数据流的速率为$aGPNPort5Cnt1(cnt6)，没在$::rateL-$::rateR\范围内" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "$matchType trunk组$trunKName\模式为$ModeFlag\时trunk组端口$port1 up $port2 down NE3($::gpnIp3)$::GPNTestEth4\
+				发送tag=1000的数据流，NE1($::gpnIp1)$::GPNTestEth5\收到tag=1000的数据流的速率为$aGPNPort5Cnt1(cnt6)，在$::rateL-$::rateR\范围内" $fileId
+		}
+	}
+	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $masterPort "undo shutdown"
+	after 5000
+	gwd::Stop_SendFlow "$::hGPNPort5Gen $::hGPNPort4Gen"  "$::hGPNPort5Ana $::hGPNPort4Ana"
+	return $flag
+}
+########################################################################################################
 #函数功能：统计端口上的丢包和速率
 #输入参数:
 #	  ana:分析器
@@ -8895,14 +9338,14 @@ proc Test_TrunkModeAdd {spawn_id matchType dutType fileId ModeFlag trunKName mas
 #	  resultRate:速率
 #输出参数：无
 #返回值： 无
-#作者：唐丽春
+#唐丽春
 ########################################################################################################
 proc Stat_dropAndRate {Ana resultDrop resultRate} {
 	upvar $resultDrop tmp_Drop
 	upvar $resultRate tmp_Rate
 	set errorTmp 0
 	set tmp_Drop 0
-	foreach resultsObj [stc::get $::hGPNPort4Ana -children-FilteredStreamResults] {
+	foreach resultsObj [stc::get $Ana -children-FilteredStreamResults] {
                 if {[catch {
                         send_log "\n resultsObj:$resultsObj"
                         after 2000
@@ -8937,15 +9380,17 @@ proc Test_TrunkSharing {spawn_id matchType dutType fileId ModeFlag trunKName mas
     if {$::cap_enable} {
             gwd::Start_CapAllData ::capArr $::hGPNPort3Cap $::hGPNPort3CapAnalyzer 
             gwd::Start_CapAllData ::capArr $::hGPNPort4Cap $::hGPNPort4CapAnalyzer
+            gwd::Start_CapAllData ::capArr $::hGPNPort5Cap $::hGPNPort5CapAnalyzer
     }
-    set lport1 "$::hGPNPort1 $::hGPNPort2 $::hGPNPort3 $::hGPNPort4"
+    set lport1 "$::hGPNPort3 $::hGPNPort4 $::hGPNPort5"
 	stc::perform ResultsClearAll -PortList $lport1
-    gwd::Start_SendFlow "$::hGPNPort3Gen $::hGPNPort4Gen"  "$::hGPNPort3Ana $::hGPNPort4Ana"
+    gwd::Start_SendFlow "$::hGPNPort3Gen $::hGPNPort4Gen $::hGPNPort5Gen"  "$::hGPNPort3Ana $::hGPNPort4Ana $::hGPNPort5Ana"
     after 15000
 	incr capId
 	if {$::cap_enable} {
                 gwd::Stop_CapData $::hGPNPort3Cap 1 "$caseId\_$capId-p$::GPNTestEth3_cap\($::gpnIp1).pcap"
                 gwd::Stop_CapData $::hGPNPort4Cap 1 "$caseId\_$capId-p$::GPNTestEth4_cap\($::gpnIp3).pcap"
+                gwd::Stop_CapData $::hGPNPort5Cap 1 "$caseId\_$capId-p$::GPNTestEth5_cap\($::gpnIp1).pcap"
 	}
 	gwd::GWpublic_getPortStat $spawn_id $matchType $dutType $fileId $masterPort statArr1
 	gwd::GWpublic_getPortStat $spawn_id $matchType $dutType $fileId $slavePort statArr2
@@ -8968,31 +9413,143 @@ proc Test_TrunkSharing {spawn_id matchType dutType fileId ModeFlag trunKName mas
 		set smacStatus "跳变"
 		if {$rateCntflag>1} {
 			gwd::GWpublic_print "OK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的流，查看业务承载在两个端口上" $fileId
-		} else {
+		} elseif {$rateCntflag == 1} {
 			set flag 1 
 			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的流，业务承载在一个端口上" $fileId
+		} elseif {$rateCntflag == 0} {
+			set flag 1 
+			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的流，业务不通" $fileId
 		}
 	} else {
 		set smacStatus "不变"
-		if {$rateCntflag>1} {
+		if {$rateCntflag > 1} {
 			set flag 1 
 			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的一条流，业务不仅在一个端口上，两端都有流量" $fileId
-		} else {
+		} elseif {$rateCntflag == 1} {
 			gwd::GWpublic_print "OK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的一条流，查看业务在一个端口上" $fileId
+		} elseif {$rateCntflag == 0} {
+			set flag 1 
+			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的一条流，业务不通" $fileId
 		}
 	}
 	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $bearerPort "shutdown"
 	after 5000
-	Stat_dropAndRate $::hGPNPort3Ana tmp_Drop1 tmp_Rate1
 	Stat_dropAndRate $::hGPNPort4Ana tmp_Drop2 tmp_Rate2
-    send_log "\ntmp_DropPort3:$tmp_Drop1"
-    send_log "\ntmp_RatePort3:$tmp_Rate1"
     send_log "\ntmp_DropPort4:$tmp_Drop2"
     send_log "\ntmp_RatePort4:$tmp_Rate2"
 
 	set printWord "承载端口" 
-	if {$tmp_Rate1 != 0} {
-		set DhTime2 [expr $tmp_Drop1*1000/$tmp_Rate1]
+	if {$tmp_Rate2 != 0} {
+		set DhTime2 [expr $tmp_Drop2*1000/$tmp_Rate2]
+		if {$DhTime2>$trunkSwTime} {
+			set flag 1
+			gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\down操作后，TC4口接收倒换时间为$DhTime2\ms大于最大允许倒换时间$trunkSwTime\ms" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\down操作后，TC4口接收倒换时间为$DhTime2\ms小于最大允许倒换时间$trunkSwTime\ms" $fileId
+		}
+	} else {
+		gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\down操作后TC4口收不到流，无法测试TC3发送倒换时间" $fileId
+	}
+	after 5000
+	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $bearerPort "undo shutdown"
+    after 60000 ;#等待回切时间
+    after 2000
+	Stat_dropAndRate $::hGPNPort4Ana tmp_Drop2 tmp_Rate2
+    send_log "\ntmp_DropPort4:$tmp_Drop2"
+    send_log "\ntmp_RatePort4:$tmp_Rate2"	
+	if {$tmp_Rate2 != 0} {
+		
+		if {$tmp_Drop2 != 0} {
+			set flag 1
+			gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\up操作后，TC4口接收到的流量丢包" $fileId
+		} else {
+			gwd::GWpublic_print "OK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\up操作后，TC4口接收到的流量不丢包" $fileId
+		}
+	} else {
+		gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\up操作后TC4口接收不到流，无法测试TC3发送的业务" $fileId
+	}
+	
+	stc::perform ResultsClearAll -PortList $lport1
+	after 5000
+	gwd::Stop_SendFlow "$::hGPNPort4Gen $::hGPNPort5Gen"  "$::hGPNPort4Ana $::hGPNPort5Ana"
+	return $flag
+}
+########################################################################################################
+#函数功能：GPN上trunk组模式测试sharing模式的测试
+#输入参数:ModeFlag:模式类型
+#	  slavePort:从端口
+#	  masterPort:端口组的主端口
+#	  smacAdd:smac是否增加 true 增加 false 不增加
+#输出参数：无
+#返回值： 无
+#作者：唐丽春
+########################################################################################################
+proc Test_TrunkSharingyes {spawn_id matchType dutType fileId ModeFlag trunKName masterPort slavePort smacAdd caseId} {
+	global capId
+	global trunkSwTime
+	set flag 0
+    if {$::cap_enable} {
+            gwd::Start_CapAllData ::capArr $::hGPNPort4Cap $::hGPNPort4CapAnalyzer
+            gwd::Start_CapAllData ::capArr $::hGPNPort5Cap $::hGPNPort5CapAnalyzer
+    }
+    set lport1 "$::hGPNPort4 $::hGPNPort5"
+	stc::perform ResultsClearAll -PortList $lport1
+    gwd::Start_SendFlow "$::hGPNPort4Gen $::hGPNPort5Gen"  "$::hGPNPort4Ana $::hGPNPort5Ana"
+    after 15000
+	incr capId
+	if {$::cap_enable} {
+                gwd::Stop_CapData $::hGPNPort4Cap 1 "$caseId\_$capId-p$::GPNTestEth4_cap\($::gpnIp3).pcap"
+                gwd::Stop_CapData $::hGPNPort4Cap 1 "$caseId\_$capId-p$::GPNTestEth5_cap\($::gpnIp3).pcap"
+	}
+	gwd::GWpublic_getPortStat $spawn_id $matchType $dutType $fileId $masterPort statArr1
+	gwd::GWpublic_getPortStat $spawn_id $matchType $dutType $fileId $slavePort statArr2
+	set rateCntflag 0 ;###判断流量是否在一个端口上的指针
+	set outRate1 $statArr1(-outBytesRate)
+	set outRate2 $statArr2(-outBytesRate)
+	set inRate1 $statArr1(-inBytesRate)
+	set inRate2 $statArr2(-inBytesRate)
+	send_log "\noutRate1:$outRate1\n\outRate2:$outRate2\ninRate1:$inRate1\ninRate2:$inRate2"
+
+	if {$outRate1 > 0 || $inRate1 > 0} {
+		incr rateCntflag 
+		set bearerPort $masterPort
+	}
+	if {$outRate2 > 0 || $inRate2 > 0} {
+		incr rateCntflag 
+		set bearerPort $slavePort
+	}
+	if {[string match -nocase $smacAdd "true"]} {
+		set smacStatus "跳变"
+		if {$rateCntflag>1} {
+			gwd::GWpublic_print "OK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的流，查看业务承载在两个端口上" $fileId
+		} elseif {$rateCntflag == 1} {
+			set flag 1 
+			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的流，业务承载在一个端口上" $fileId
+		} elseif {$rateCntflag == 0} {
+			set flag 1 
+			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的流，业务不通" $fileId
+		}
+	} else {
+		set smacStatus "不变"
+		if {$rateCntflag > 1} {
+			set flag 1 
+			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的一条流，业务不仅在一个端口上，两端都有流量" $fileId
+		} elseif {$rateCntflag == 1} {
+			gwd::GWpublic_print "OK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的一条流，查看业务在一个端口上" $fileId
+		} elseif {$rateCntflag == 0} {
+			set flag 1 
+			gwd::GWpublic_print "NOK" "sharing时NE1($::gpnIp1)发送带vlan50,SMAC$smacStatus的一条流，业务不通" $fileId
+		}
+	}
+	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $bearerPort "shutdown"
+	after 5000
+	Stat_dropAndRate $::hGPNPort4Ana tmp_Drop2 tmp_Rate2
+    send_log "\ntmp_DropPort4:$tmp_Drop2"
+    send_log "\ntmp_RatePort4:$tmp_Rate2"
+
+	set printWord "承载端口" 
+	if {$tmp_Rate2 != 0} {
+		set DhTime2 [expr $tmp_Drop2*1000/$tmp_Rate2]
 		if {$DhTime2>$trunkSwTime} {
 			set flag 1
 			gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\down操作后，TC4口接收倒换时间为$DhTime2\ms大于最大允许倒换时间$trunkSwTime\ms" $fileId
@@ -9005,12 +9562,12 @@ proc Test_TrunkSharing {spawn_id matchType dutType fileId ModeFlag trunKName mas
 	gwd::GWpublic_CfgPortState $spawn_id $matchType $dutType $fileId $bearerPort "undo shutdown"
     after 60000 ;#等待回切时间
     after 2000
-	Stat_dropAndRate $::hGPNPort3Ana tmp_Drop1 tmp_Rate1
-    send_log "\ntmp_DropPort3:$tmp_Drop1"
-    send_log "\ntmp_RatePort3:$tmp_Rate1"	
-	if {$tmp_Rate1 != 0} {
+	Stat_dropAndRate $::hGPNPort4Ana tmp_Drop2 tmp_Rate2
+    send_log "\ntmp_DropPort4:$tmp_Drop2"
+    send_log "\ntmp_RatePort4:$tmp_Rate2"	
+	if {$tmp_Rate2 != 0} {
 		
-		if {$tmp_Drop1 != 0} {
+		if {$tmp_Drop2 != 0} {
 			set flag 1
 			gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\up操作后，TC4口接收到的流量丢包" $fileId
 		} else {
@@ -9020,10 +9577,9 @@ proc Test_TrunkSharing {spawn_id matchType dutType fileId ModeFlag trunKName mas
 		gwd::GWpublic_print "NOK" "（SMAC$smacStatus）$matchType trunk组$trunKName$printWord$bearerPort\up操作后TC4口接收不到流，无法测试TC3发送的业务" $fileId
 	}
 	
-	set lport1 "$::hGPNPort1 $::hGPNPort2 $::hGPNPort3 $::hGPNPort4"
 	stc::perform ResultsClearAll -PortList $lport1
 	after 5000
-	gwd::Stop_SendFlow "$::hGPNPort3Gen $::hGPNPort4Gen"  "$::hGPNPort3Ana $::hGPNPort4Ana"
+	gwd::Stop_SendFlow "$::hGPNPort4Gen $::hGPNPort5Gen"  "$::hGPNPort4Ana $::hGPNPort5Ana"
 	return $flag
 }
 
@@ -9129,7 +9685,7 @@ proc GW_SetTrunkMaster {spawn_id matchType dutType fileId trunKName GPNPort} {
 #返回值：    无
 #唐丽春
 ########################################################################################################
-proc GW_SetEthQueueMode {spawn_id matchType dutType fileId GPNPort queMode} {
+proc GWpublic_SetEthQueueMode {spawn_id matchType dutType fileId GPNPort queMode} {
 		set errorTmp 0
 		send -i $spawn_id "\r"
 		 #检测节点
@@ -9138,7 +9694,12 @@ proc GW_SetEthQueueMode {spawn_id matchType dutType fileId GPNPort queMode} {
 	 		 -re "$matchType\\(config\\)#" {
 				send -i $spawn_id "interface ethernet $GPNPort\r\r"
 	 		}
+	 		-timeout 5
+	  		timeout {
+				gwd::GWpublic_toConfig $spawn_id $matchType
+	  		}
   		}
+
   		expect {
 			-i $spawn_id
 			-re "$matchType\\(if-eth$GPNPort\\)#" {
@@ -9167,7 +9728,7 @@ proc GW_SetEthQueueMode {spawn_id matchType dutType fileId GPNPort queMode} {
 #返回值：    无
 #唐丽春
 ########################################################################################################
-proc GW_SetPWQueueMode {spawn_id matchType dutType fileId pwName queMode} {
+proc GWpublic_SetPWQueueMode {spawn_id matchType dutType fileId pwName queMode} {
 		set errorTmp 0
 		send -i $spawn_id "\r"
 		 #检测节点
@@ -9176,12 +9737,10 @@ proc GW_SetPWQueueMode {spawn_id matchType dutType fileId pwName queMode} {
 	 		 -re "$matchType\\(config\\)#" {
 				send -i $spawn_id "interface pw $pwName\r"
 	 		}
-  		}
-  		expect {
-			-i $spawn_id
-			-re "$matchType\\(config-pw-$pwName\\)#" {
-			    send -i $spawn_id "hqos enable\r" 
-			}
+	 		-timeout 5
+	  		timeout {
+				gwd::GWpublic_toConfig $spawn_id $matchType
+	  		}
   		}
   		expect {
 			-i $spawn_id
@@ -9202,140 +9761,140 @@ proc GW_SetPWQueueMode {spawn_id matchType dutType fileId pwName queMode} {
    }
   return $errorTmp 
 }
-########################################################################################################
-#函数功能：设置端口限速
-#          GPNPort 	端口号
-#          dir      方向
-#		   rate 	速率（单位M）
-#输出参数：aRecCnt：统计结果
-#返回值：    无
-#唐丽春
-########################################################################################################
-proc GW_SetEthRate {spawn_id matchType dutType fileId GPNPort dir rate result} {
-		 set errorTmp 0
-		 upvar $result tmpresult
-		 send -i $spawn_id "\r"
-		 #检测节点
-		 expect {
-	 		 -i $spawn_id
-	 		 -re "$matchType\\(config\\)#" {
-				send -i $spawn_id "interface ethernet $GPNPort\r"
-	 		}
-  		}
-  		expect {
-			-i $spawn_id
-			-re "$matchType\\(if-eth$GPNPort\\)#" {
-			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
-			}
-  		}
-		expect {
-	     -i $spawn_id
-	     -re {Unknown command} {
-	      set errorTmp 1
-	      gwd::GWpublic_print NOK "$matchType\上配置端口 $GPNPort\限速为$rate\，失败。命令参数有误" $fileId
-	     -re "line-rate.*$matchType\\(if-eth$GPNPort\\)#" {
-		 regexp -all -nocase {Used memory: ([0-9|.]+)%.*User} $expect_out(0,string) match Tmpuserate
-		 send -i $spawn_id "\r"
-		 set tmpresult 
-		 }
-	  }
-	  -re "$matchType\\(config-pw-$pwName\\)#" {
-	       send -i $spawn_id "exit\r" 
-	      gwd::GWpublic_print OK "$matchType\上配置端口 $GPNPort\限速为$rate\，成功" $fileId   
-	  }
-   }
-  return $errorTmp 
-}
-########################################################################################################
-#函数功能：设置pw限速
-#          pwName 	pw名称
-#          dir      方向
-#		   rate 	速率（单位M）
-#输出参数：aRecCnt：统计结果
-#返回值：    无
-#唐丽春
-########################################################################################################
-proc GW_SetPwRate {spawn_id matchType dutType fileId pwName dir rate result} {
-		set errorTmp 0
-		upvar $result tmpresult
-		send -i $spawn_id "\r"
-		 #检测节点
-		 expect {
-	 		 -i $spawn_id
-	 		 -re "$matchType\\(config\\)#" {
-				send -i $spawn_id "interface pw $pwName\r"
-	 		}
-  		}
-  		expect {
-			-i $spawn_id
-			-re "$matchType\\(config-pw-$pwName\\)#" {
-			    send -i $spawn_id "hqos enable\r" 
-			}
-  		}
-  		expect {
-			-i $spawn_id
-			-re "$matchType\\(config-pw-$pwName\\)#" {
-			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
-			}
-  		}
-		expect {
-	     -i $spawn_id
-	     -re {Unknown command} {
-	      set errorTmp 1
-	      gwd::GWpublic_print NOK "$matchType\上配置pw $pwName\限速为$rate\，失败。命令参数有误" $fileId
-	  }
-	  -re "$matchType\\(config-pw-$pwName\\)#" {
-	       send -i $spawn_id "exit\r" 
-	      gwd::GWpublic_print OK "$matchType\上配置pw $pwName\限速为$rate\，成功" $fileId   
-	  }
-   }
-  return $errorTmp 
-}
-#######################################################################################################
-#函数功能：设置ac限速
-#          acName 	ac名称
-#          dir      方向
-#		   rate 	速率（单位M）
-#输出参数：aRecCnt：统计结果
-#返回值：    无
-#唐丽春
-########################################################################################################
-proc GW_SetAcRate {spawn_id matchType dutType fileId acName dir rate result} {
-		set errorTmp 0
-		upvar $result tmpresult
-		send -i $spawn_id "\r"
-		 #检测节点
-		 expect {
-	 		 -i $spawn_id
-	 		 -re "$matchType\\(config\\)#" {
-				send -i $spawn_id "interface ac $acName\r"
-	 		}
-  		}
-  		expect {
-			-i $spawn_id
-			-re "$matchType\\(config-ac-$acName\\)#" {
-			    send -i $spawn_id "hqos $dir enable\r" 
-			}
-  		}
-  		expect {
-			-i $spawn_id
-			-re "$matchType\\(config-ac-$acName\\)#" {
-			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
-			}
-  		}
-		expect {
-	     -i $spawn_id
-	     -re {Unknown command} {
-	      set errorTmp 1
-	      gwd::GWpublic_print NOK "$matchType\上配置ac $acName\限速为$rate\，失败。命令参数有误" $fileId
-	  }
-	  -re "$matchType\\(config-ac-$acName\\)#" {
-	       send -i $spawn_id "exit\r" 
-	      gwd::GWpublic_print OK "$matchType\上配置ac $acName\限速为$rate\，成功" $fileId   
-	  }
-   }
-  return $errorTmp 
-}
+# ########################################################################################################
+# #函数功能：设置端口限速
+# #          GPNPort 	端口号
+# #          dir      方向
+# #		   rate 	速率（单位M）
+# #输出参数：aRecCnt：统计结果
+# #返回值：    无
+# #唐丽春
+# ########################################################################################################
+# proc GW_SetEthRate {spawn_id matchType dutType fileId GPNPort dir rate result} {
+# 		 set errorTmp 0
+# 		 upvar $result tmpresult
+# 		 send -i $spawn_id "\r"
+# 		 #检测节点
+# 		 expect {
+# 	 		 -i $spawn_id
+# 	 		 -re "$matchType\\(config\\)#" {
+# 				send -i $spawn_id "interface ethernet $GPNPort\r"
+# 	 		}
+#   		}
+#   		expect {
+# 			-i $spawn_id
+# 			-re "$matchType\\(if-eth$GPNPort\\)#" {
+# 			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
+# 			}
+#   		}
+# 		expect {
+# 	     -i $spawn_id
+# 	     -re {Unknown command} {
+# 	      set errorTmp 1
+# 	      gwd::GWpublic_print NOK "$matchType\上配置端口 $GPNPort\限速为$rate\，失败。命令参数有误" $fileId
+# 	     -re "line-rate.*$matchType\\(if-eth$GPNPort\\)#" {
+# 		 regexp -all -nocase {Used memory: ([0-9|.]+)%.*User} $expect_out(0,string) match Tmpuserate
+# 		 send -i $spawn_id "\r"
+# 		 set tmpresult 
+# 		 }
+# 	  }
+# 	  -re "$matchType\\(config-pw-$pwName\\)#" {
+# 	       send -i $spawn_id "exit\r" 
+# 	      gwd::GWpublic_print OK "$matchType\上配置端口 $GPNPort\限速为$rate\，成功" $fileId   
+# 	  }
+#    }
+#   return $errorTmp 
+# }
+# ########################################################################################################
+# #函数功能：设置pw限速
+# #          pwName 	pw名称
+# #          dir      方向
+# #		   rate 	速率（单位M）
+# #输出参数：aRecCnt：统计结果
+# #返回值：    无
+# #唐丽春
+# ########################################################################################################
+# proc GW_SetPwRate {spawn_id matchType dutType fileId pwName dir rate result} {
+# 		set errorTmp 0
+# 		upvar $result tmpresult
+# 		send -i $spawn_id "\r"
+# 		 #检测节点
+# 		 expect {
+# 	 		 -i $spawn_id
+# 	 		 -re "$matchType\\(config\\)#" {
+# 				send -i $spawn_id "interface pw $pwName\r"
+# 	 		}
+#   		}
+#   		expect {
+# 			-i $spawn_id
+# 			-re "$matchType\\(config-pw-$pwName\\)#" {
+# 			    send -i $spawn_id "hqos enable\r" 
+# 			}
+#   		}
+#   		expect {
+# 			-i $spawn_id
+# 			-re "$matchType\\(config-pw-$pwName\\)#" {
+# 			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
+# 			}
+#   		}
+# 		expect {
+# 	     -i $spawn_id
+# 	     -re {Unknown command} {
+# 	      set errorTmp 1
+# 	      gwd::GWpublic_print NOK "$matchType\上配置pw $pwName\限速为$rate\，失败。命令参数有误" $fileId
+# 	  }
+# 	  -re "$matchType\\(config-pw-$pwName\\)#" {
+# 	       send -i $spawn_id "exit\r" 
+# 	      gwd::GWpublic_print OK "$matchType\上配置pw $pwName\限速为$rate\，成功" $fileId   
+# 	  }
+#    }
+#   return $errorTmp 
+# }
+# #######################################################################################################
+# #函数功能：设置ac限速
+# #          acName 	ac名称
+# #          dir      方向
+# #		   rate 	速率（单位M）
+# #输出参数：aRecCnt：统计结果
+# #返回值：    无
+# #唐丽春
+# ########################################################################################################
+# proc GW_SetAcRate {spawn_id matchType dutType fileId acName dir rate result} {
+# 		set errorTmp 0
+# 		upvar $result tmpresult
+# 		send -i $spawn_id "\r"
+# 		 #检测节点
+# 		 expect {
+# 	 		 -i $spawn_id
+# 	 		 -re "$matchType\\(config\\)#" {
+# 				send -i $spawn_id "interface ac $acName\r"
+# 	 		}
+#   		}
+#   		expect {
+# 			-i $spawn_id
+# 			-re "$matchType\\(config-ac-$acName\\)#" {
+# 			    send -i $spawn_id "hqos $dir enable\r" 
+# 			}
+#   		}
+#   		expect {
+# 			-i $spawn_id
+# 			-re "$matchType\\(config-ac-$acName\\)#" {
+# 			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
+# 			}
+#   		}
+# 		expect {
+# 	     -i $spawn_id
+# 	     -re {Unknown command} {
+# 	      set errorTmp 1
+# 	      gwd::GWpublic_print NOK "$matchType\上配置ac $acName\限速为$rate\，失败。命令参数有误" $fileId
+# 	  }
+# 	  -re "$matchType\\(config-ac-$acName\\)#" {
+# 	       send -i $spawn_id "exit\r" 
+# 	      gwd::GWpublic_print OK "$matchType\上配置ac $acName\限速为$rate\，成功" $fileId   
+# 	  }
+#    }
+#   return $errorTmp 
+# }
 #######################################################################################################
 #函数功能：设置lsp限速
 #          lspName 	ac名称
@@ -9343,9 +9902,8 @@ proc GW_SetAcRate {spawn_id matchType dutType fileId acName dir rate result} {
 #		   rate 	速率（单位M）
 #输出参数：aRecCnt：统计结果
 #返回值：    无
-#唐丽春
 ########################################################################################################
-proc GW_SetLspRate {spawn_id matchType dutType fileId lspName dir rate result} {
+proc GWpublic_addLspRate {spawn_id matchType dutType fileId lspName dir cir cbs pir pbs otherPara} {
 		set errorTmp
 		upvar $result tmpresult 
 		send -i $spawn_id "\r"
@@ -9364,20 +9922,28 @@ proc GW_SetLspRate {spawn_id matchType dutType fileId lspName dir rate result} {
   		}
   		expect {
 			-i $spawn_id
-			-re "$matchType\\(config-lsp-tunnel-$lspName\\)#" {
-			    send -i $spawn_id "line-rate $dir cir [expr $rate*1000] cbs 1024\r" 
+			-re "(% Error.*)$matchType\\(config\\)#" {
+				gwd::GWpublic_print NOK "$matchType\上配置$lspName\的限速，进入$AcName\节点失败。系统提示：$expect_out(1,string)" $fileId
+				return 1
 			}
+			-re "$matchType\\(config-lsp-tunnel-$lspName\\)#" {
+				send -i $spawn_id "line-rate $dir cir $cir cbs $cbs pir $pir pbs $pbs $otherPara\r"
+			}
+			timeout {set errorTmp 1;send -i $spawn_id "\r"}
   		}
-		expect {
-	     -i $spawn_id
-	     -re {Unknown command} {
-	      set errorTmp 1
-	      gwd::GWpublic_print NOK "$matchType\上配置lsp $lspName\限速为$rate\，失败。命令参数有误" $fileId
-	  }
-	  -re "$matchType\\(config-lsp-tunnel-$lspName\\)#" {
-	       send -i $spawn_id "exit\r" 
-	      gwd::GWpublic_print OK "$matchType\上配置lsp $lspName\限速为$rate\，成功" $fileId   
-	  }
-   }
-  return $errorTmp 
+	     expect {
+			-i $spawn_id
+			-re "(% Error.*)$matchType\\(config-lsp-tunnel-$lspName\\)#" {
+				gwd::GWpublic_print NOK "$matchType\上配置$lspName\的限速：line-rate $dir cir $cir cbs $cbs pir $pir pbs $pbs $otherPara。系统提示：$expect_out(1,string)" $fileId
+				send -i $spawn_id "exit\r"
+				return 1
+			}
+			-re "$matchType\\(config-lsp-tunnel-$lspName\\)#" {
+				send -i $spawn_id "exit\r"
+			}
+			-timeout 15
+			timeout {set errorTmp 1;send -i $spawn_id "\r"}
+		}
+	gwd::GWpublic_print [expr {($errorTmp == 0) ? "OK" : "NOK"}] "$matchType\上配置$lspName\的限速：line-rate $dir cir $cir cbs $cbs pir $pir pbs $pbs $otherPara。" $fileId
+	return $errorTmp
 }
